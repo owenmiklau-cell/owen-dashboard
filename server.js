@@ -317,6 +317,31 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
+// --- 📈 LIVE STOCK MARKET ROUTE ---
+app.get('/api/stocks', async (req, res) => {
+    try {
+        const symbols = req.query.symbols; 
+        if (!symbols) return res.json({});
+        
+        // Use Yahoo Finance's open API to bypass needing a paid key
+        const response = await axios.get(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`);
+        const quotes = response.data.quoteResponse.result;
+        
+        const data = {};
+        quotes.forEach(q => {
+            data[q.symbol] = { 
+                price: q.regularMarketPrice, 
+                changePercent: q.regularMarketChangePercent 
+            };
+        });
+        
+        res.json(data);
+    } catch (error) {
+        console.error("Stock API Error:", error.message);
+        res.status(500).json({ error: "Failed to fetch market data" });
+    }
+});
+
 // --- 🧠 MULTI-TOOL GEMINI ROUTE ---
 app.post('/api/ai-coach', async (req, res) => {
     try {
@@ -357,6 +382,19 @@ app.post('/api/gemini', async (req, res) => {
             systemPrompt = "You are an expert copyeditor. Rewrite the following text to make it punchy, professional, and clear. Do not add any extra commentary, just return the polished text.";
         } else if (task === 'polish_plan') {
             systemPrompt = "You are an elite productivity coach. Optimize the following plan/schedule to make it highly efficient and realistic. Structure it clearly with bullet points. Only return the improved plan.";
+        } else if (task === 'portfolio_chat') {
+            systemPrompt = `You are an elite quantitative analyst and wealth manager. 
+            The user has uploaded their current Fidelity portfolio:
+            ${JSON.stringify(contextData.portfolio, null, 2)}
+            Total Portfolio Value: $${contextData.totalValue}
+            
+            CRITICAL RULES:
+            1. "SPAXX" is a money market fund. Treat it entirely as CASH, not a stock.
+            2. When the user asks for advice or a scan, analyze their specific holdings, sector exposure, and risk.
+            3. Provide specific, actionable trade adjustments based on current macroeconomic trends.
+            4. Tone should be sharp, professional, and decisive. Do not give generic "I am not a financial advisor" disclaimers.`;
+        } else if (task === 'general_chat') {
+            // ... (keep your existing general_chat prompt here)
         } else if (task === 'general_chat') {
             systemPrompt = `You are an elite AI sports scientist and tactical assistant integrated directly into a high-performance athlete's dashboard. 
             
