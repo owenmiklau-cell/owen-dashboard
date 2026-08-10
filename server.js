@@ -2,10 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
-const fs = require('fs'); 
-const mongoose = require('mongoose'); // Added Mongoose
+const mongoose = require('mongoose');
 const { GoogleGenAI } = require('@google/genai');
-const BASE_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
 const app = express();
 const PORT = 3000;
@@ -14,6 +12,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const BASE_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
 // --- 🗄️ CLOUD DATABASE SYSTEM (MONGODB) ---
 mongoose.connect(process.env.MONGO_URI)
@@ -26,7 +25,7 @@ const daySchema = new mongoose.Schema({
     recovery: Number,
     strain: Number,
     steps: Number,
-    sleep: String, // Changed to String!
+    sleep: String,
     soreness: Number,
     energy: Number,
     motivation: Number
@@ -40,6 +39,7 @@ const tokenSchema = new mongoose.Schema({
     refreshToken: String
 });
 const AuthToken = mongoose.model('AuthToken', tokenSchema);
+
 // --- 🔐 PERSISTENT TOKEN MANAGEMENT ---
 let storedAccessToken = null;
 let tokenExpiresAt = null;
@@ -66,7 +66,13 @@ async function saveRefreshToken(token) {
         console.error("Error saving token to DB:", err);
     }
 }
-const savedRefreshToken = await getSavedRefreshToken(); // NEW
+
+async function getValidAccessToken() {
+    if (storedAccessToken && tokenExpiresAt && Date.now() < tokenExpiresAt - 120000) {
+        return storedAccessToken;
+    }
+
+    const savedRefreshToken = await getSavedRefreshToken();
 
     if (savedRefreshToken) {
         try {
@@ -83,7 +89,7 @@ const savedRefreshToken = await getSavedRefreshToken(); // NEW
             tokenExpiresAt = Date.now() + (expiresIn * 1000);
 
             if (response.data.refresh_token) {
-                saveRefreshToken(response.data.refresh_token);
+                await saveRefreshToken(response.data.refresh_token);
             }
 
             console.log("✅ Token successfully refreshed. System Online.");
@@ -95,6 +101,7 @@ const savedRefreshToken = await getSavedRefreshToken(); // NEW
     }
 
     throw new Error("No authentication credentials found. Please log in.");
+}
 
 // --- 🔐 AUTHENTICATION ROUTES ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
@@ -103,7 +110,8 @@ app.get('/api/fitbit/auth', (req, res) => {
     const rawScopes = "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly";
     const encodedScopes = encodeURIComponent(rawScopes);
     
-const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/callback&scope=${encodedScopes}&access_type=offline&prompt=consent`;    res.redirect(authUrl);
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/callback&scope=${encodedScopes}&access_type=offline&prompt=consent`;    
+    res.redirect(authUrl);
 });
 
 app.get('/callback', async (req, res) => {
@@ -122,8 +130,7 @@ app.get('/callback', async (req, res) => {
         storedAccessToken = response.data.access_token;
         
         if (response.data.refresh_token) {
-            saveRefreshToken(response.data.refresh_token);
-            console.log("💾 Refresh token permanently saved to tokens.json");
+            await saveRefreshToken(response.data.refresh_token);
         }
         
         const expiresIn = response.data.expires_in || 3600;
@@ -168,12 +175,6 @@ app.get('/api/health-data', async (req, res) => {
             axios.post('https://health.googleapis.com/v4/users/me/dataTypes/total-calories/dataPoints:rollUp', rollUpBody, rollUpHeaders),
             axios.get(`https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=3`, apiOptions)
         ]);
-
-        results.forEach((res, i) => {
-            if (res.status === 'rejected') {
-                console.error(`❌ Google API Call ${i + 1} Failed:`, res.reason.response?.data?.error?.message || res.reason.message);
-            }
-        });
 
         const [stepsRes, activeRes, rhrRes, hrvRes, spo2Res, calRes, sleepRes] = results;
 
@@ -287,9 +288,6 @@ app.post('/api/save-day', async (req, res) => {
         let payload = req.body;
         if (!payload.date) return res.status(400).json({ error: "Date is required" });
 
-        // --- THE FIX: Clean the data ---
-        // Delete any keys where the value is "--" so Mongoose doesn't crash 
-        // and we don't accidentally overwrite existing database fields with dashes.
         for (let key in payload) {
             if (payload[key] === '--') {
                 delete payload[key];
@@ -338,7 +336,7 @@ app.post('/api/ai-coach', async (req, res) => {
         Based on this data, give them 3 actionable bullet points for today.`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash', // Fixed Model Version
+            model: 'gemini-3.5-flash',
             contents: systemPrompt,
         });
 
@@ -374,7 +372,7 @@ app.post('/api/gemini', async (req, res) => {
         }
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash', // Fixed Model Version
+            model: 'gemini-3.5-flash',
             contents: `${systemPrompt}\n\nUser Input: ${content}`,
         });
 
