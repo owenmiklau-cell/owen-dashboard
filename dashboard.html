@@ -155,69 +155,23 @@
     .chat-input-area input:focus { border-color: var(--accent-purple); }
     .chat-input-area button { background: var(--accent-purple); color: white; border: none; padding: 0 24px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
     .chat-input-area button:hover { opacity: 0.8; }
+    
     /* --- 📱 MOBILE RESPONSIVENESS (The Field Upgrade) --- */
     @media (max-width: 768px) {
-      /* 1. Reduce overall body padding so we don't waste screen real estate */
-      body {
-        padding: 20px 12px 100px;
-      }
-
-      /* 2. Stack the header and weather widget */
-      .top-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-      }
-      .dash-title {
-        font-size: 24px;
-      }
-
-      /* 3. Stack the Day Ring and the time details below it */
-      .day-ring-wrap {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      /* 4. Force main health cards (Recovery, Strain) into a single vertical column */
-      .health-hero-grid {
-        grid-template-columns: 1fr;
-      }
-
-      /* 5. Force the mini stats (Steps, HR, etc.) into a neat 2-column grid */
-      .health-mini-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-      }
-
-      /* 6. Stack input fields and make buttons full-width for easier thumb tapping */
-      .gm-input-wrap {
-        flex-direction: column;
-      }
-      .gm-input-wrap button {
-        width: 100%;
-        padding: 14px;
-      }
-
-      /* 7. Adjust the AI Chat widget for mobile thumbs */
-      .chat-input-area {
-        flex-direction: column;
-        gap: 10px;
-      }
-      .chat-input-area input {
-        margin-right: 0;
-      }
-      .chat-input-area button {
-        padding: 14px;
-      }
-
-      /* 8. Compress the tab buttons slightly */
-      .tab-btn {
-        padding: 10px 16px;
-        font-size: 13px;
-      }
+      body { padding: 20px 12px 100px; }
+      .top-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .dash-title { font-size: 24px; }
+      .day-ring-wrap { flex-direction: column; gap: 20px; text-align: center; }
+      .health-hero-grid { grid-template-columns: 1fr; }
+      .health-mini-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .gm-input-wrap { flex-direction: column; }
+      .gm-input-wrap button { width: 100%; padding: 14px; }
+      .chat-input-area { flex-direction: column; gap: 10px; }
+      .chat-input-area input { margin-right: 0; }
+      .chat-input-area button { padding: 14px; }
+      .tab-btn { padding: 10px 16px; font-size: 13px; }
     }
-</style>
+  </style>
 </head>
 <body>
 
@@ -386,7 +340,7 @@
         <div class="gm-card" style="margin-top: 24px;">
           <div class="ai-header">
             <h3><span style="font-size: 24px;">✨</span> AI Sports Scientist</h3>
-            <button class="gm-add-btn" onclick="askCoach()" style="background: var(--accent-purple); color: #fff;">Analyze Protocol</button>
+            <button id="btn-ask-coach" class="gm-add-btn" style="background: var(--accent-purple); color: #fff;">Analyze Protocol</button>
           </div>
           <div id="ai-response" class="ai-response-box">
             Sync your health data and click analyze to generate your custom elite athlete protocol for today.
@@ -728,7 +682,8 @@
       } catch (err) { console.error("Chart Render Failed:", err); }
     }
 
-    // --- 💾 Auto-Save & Health API Integration ---async function initHealthTab() {
+    // --- 💾 Auto-Save & Health API Integration ---
+    async function initHealthTab() {
       try {
         const response = await fetch('/api/health-data');
         
@@ -744,7 +699,6 @@
         if (data) {
           document.getElementById('health-auth-view').style.display = 'none';
           document.getElementById('health-data-view').style.display = 'block';
-          // ... (keep the rest of your data mapping code here)
           
           document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
           document.getElementById('tab-recovery').innerText = data.recovery || '--';
@@ -778,7 +732,8 @@
           generateMorningBriefing(); 
         }
       } catch (error) { console.error("Health Tab Failed:", error); }
-    
+    }
+
     // --- 🧠 Gemini AI Logic ---
     async function callGemini(task, content, contextData = {}) {
       try {
@@ -898,39 +853,6 @@
     document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
     document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
     
-    // --- 🧠 AI Coach Button Logic ---
-    async function askCoach() {
-      const btn = document.querySelector('button[onclick="askCoach()"]');
-      const originalText = btn.innerText;
-      btn.innerText = "Analyzing...";
-      
-      try {
-        // Grab the live numbers directly from the dashboard UI
-        const reqBody = {
-          strain: document.getElementById('tab-strain').innerText,
-          recovery: document.getElementById('tab-recovery').innerText,
-          healthScore: document.getElementById('tab-healthscore').innerText,
-          sleep: document.getElementById('tab-sleep').innerText,
-          activeMins: document.getElementById('tab-active').innerText
-        };
-        
-        // Send them to your backend AI route
-        const res = await fetch('/api/ai-coach', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reqBody)
-        });
-        
-        const data = await res.json();
-        
-        // Print the AI's response to the box
-        document.getElementById('ai-response').innerText = data.advice || data.error;
-      } catch (err) {
-        document.getElementById('ai-response').innerText = "Coach offline. Check connection.";
-      }
-      
-      btn.innerText = originalText;
-    }
     // --- Init ---
     window.addEventListener('DOMContentLoaded', () => {
       initWeather();
@@ -943,6 +865,36 @@
       setInterval(updateDayBar, 60000);
       setInterval(updateTicker, 5000);
       initHealthTab();
+      
+      // --- 🧠 AI Coach Button Logic ---
+      document.getElementById('btn-ask-coach').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-ask-coach');
+        const originalText = btn.innerText;
+        btn.innerText = "Analyzing...";
+        
+        try {
+          const reqBody = {
+            strain: document.getElementById('tab-strain').innerText,
+            recovery: document.getElementById('tab-recovery').innerText,
+            healthScore: document.getElementById('tab-healthscore').innerText,
+            sleep: document.getElementById('tab-sleep').innerText,
+            activeMins: document.getElementById('tab-active').innerText
+          };
+          
+          const res = await fetch('/api/ai-coach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reqBody)
+          });
+          
+          const data = await res.json();
+          document.getElementById('ai-response').innerText = data.advice || data.error;
+        } catch (err) {
+          document.getElementById('ai-response').innerText = "Coach offline. Check connection.";
+        }
+        
+        btn.innerText = originalText;
+      });
     });
   </script>
 </body>
