@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard</title>
+  <style>
+    /* --- Tab Navigation Styles --- */
+    .tab-container { margin-bottom: 20px; border-bottom: 2px solid #333; display: flex; gap: 10px; width: 100%; max-width: 1100px; z-index: 10; position: relative; }
+    .tab-btn { background: none; border: none; color: #888; padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
+    .tab-btn:hover { color: #fff; }
+    .tab-btn.active { color: #4CAF50; border-bottom: 3px solid #4CAF50; }
+    .tab-content { display: none; width: 100%; max-width: 1100px; }
+    .tab-content.active { display: block; }
+    
+    :root {
+      --text-primary: #FAFAFA;
+      --text-secondary: #B8B6B0;
+      --text-tertiary: #76746E;
+      --success: #6BE3A4;
+      --warning: #F2C063;
+      --danger: #FF6B6B;
+      --font-body: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #050506;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      position: relative;
+      padding: 40px 20px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      background: 
+        radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16) 0%, transparent 40%),
+        radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06) 0%, transparent 40%);
+      filter: blur(40px);
+      z-index: -2;
+      animation: drift 36s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1) translate(-2%, 2%); }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+      background-size: 3px 3px;
+      z-index: -1;
+    }
+
+    .container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dash-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 14px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    @media (max-width: 480px) {
+      .dash-title { font-size: 22px; }
+    }
+
+    .ticker-row { margin-bottom: 18px; display: flex; flex-direction: column; gap: 4px; }
+    .goal-ticker {
+      display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 12px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.30) 100%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); position: relative; overflow: hidden;
+    }
+    .goal-ticker::after {
+      content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+      animation: ticker-sweep 8s linear infinite; pointer-events: none;
+    }
+    @keyframes ticker-sweep { 0% { left: -40%; } 50%, 100% { left: 110%; } }
+    .goal-ticker-led-dot {
+      display: block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success); box-shadow: 0 0 8px rgba(107,227,164,0.7);
+      animation: led-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes led-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.85); } }
+    .goal-ticker-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 0.18em; color: var(--text-tertiary); }
+    .goal-ticker-stage { flex: 1; height: 22px; position: relative; overflow: hidden; }
+    .goal-ticker-row {
+      position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center;
+      height: 22px; gap: 8px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+      font-variant-numeric: tabular-nums; color: var(--text-primary); white-space: nowrap;
+    }
+    .goal-ticker-status { width: 18px; display: flex; justify-content: center; }
+    .goal-ticker-status[data-status="done"] { color: var(--success); }
+    .goal-ticker-status[data-status="pending"], .goal-ticker-status[data-status="empty"] { color: var(--text-tertiary); }
+    .goal-ticker-text { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+    .goal-ticker-meta {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+      color: var(--text-secondary); letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px;
+      background: rgba(255,255,255,0.04); z-index: 1;
+    }
+    .is-leaving { animation: ticker-leave 0.45s cubic-bezier(0.55, 0, 0.55, 1) forwards; }
+    .is-entering { animation: ticker-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    @keyframes ticker-leave { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-100%); } }
+    @keyframes ticker-enter { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+
+    .day-ring-wrap { display: flex; align-items: center; justify-content: center; gap: 26px; margin-bottom: 40px; flex-wrap: wrap; }
+    .ring-container { position: relative; width: 168px; height: 168px; }
+    .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+    .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.7s ease; filter: drop-shadow(0 0 6px rgba(255,255,255,0.2)); }
+    .ring-center-content { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+    .ring-percent { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1; }
+    .ring-phase { font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 0.16em; color: var(--text-tertiary); text-transform: uppercase; margin-top: 5px; margin-bottom: 2px; }
+    .ring-clock { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+    .ring-details { display: flex; flex-direction: column; gap: 6px; max-width: 280px; }
+    .ring-status-line { font-size: 14px; font-weight: 700; }
+    .ring-remaining, .ring-hours { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+    .ring-hours { font-size: 11px; color: var(--text-tertiary); }
+
+    .section { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+    .section-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .section-title::before { content: ''; width: 18px; height: 1px; background: var(--text-tertiary); opacity: 0.6; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+    .gm-card { background: rgba(255, 255, 255, 0.04); border-radius: 16px; padding: 18px 22px; backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 12px 40px rgba(0,0,0,0.45); position: relative; transition: background 0.4s ease; }
+    .gm-all-done { background: radial-gradient(circle at top, rgba(107,227,164,0.08) 0%, rgba(255, 255, 255, 0.04) 50%); }
+    .gm-card-header { display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; gap: 12px; }
+    .gm-eyebrow { font-size: 10.5px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.18em; margin-bottom: 6px; font-weight: 700; }
+    .gm-progress-row { display: flex; align-items: baseline; gap: 6px; }
+    .gm-progress-num { font-size: 42px; font-weight: 700; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; transition: color 0.3s ease; }
+    .gm-all-done .gm-progress-num { color: var(--success); }
+    .gm-progress-total { font-family: var(--font-mono); font-size: 18px; color: var(--text-tertiary); }
+    .gm-progress-label { font-size: 11px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); transition: color 0.3s ease; }
+    .gm-all-done .gm-progress-label { color: var(--success); }
+    .gm-streak { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.04); color: var(--text-tertiary); border: 1px solid transparent; height: fit-content; }
+    .gm-streak.gm-streak-active { background: rgba(242,192,99,0.10); color: var(--warning); border-color: rgba(242,192,99,0.32); }
+    .gm-streak.gm-streak-active .gm-streak-icon { filter: drop-shadow(0 0 6px rgba(242,192,99,0.6)); }
+    .gm-streak-num { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 12px; }
+    .gm-streak-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.10em; font-weight: 700; }
+    .gm-bar { display: flex; gap: 4px; height: 6px; margin-bottom: 16px; }
+    .gm-bar:empty { display: none; }
+    .gm-bar-seg { flex: 1; background: rgba(255,255,255,0.08); border-radius: 3px; transition: background 0.3s, box-shadow 0.3s; }
+    .gm-bar-seg-done { background: var(--success); box-shadow: 0 0 6px rgba(107,227,164,0.40); }
+    .gm-list { list-style: none; display: flex; flex-direction: column; }
+    .empty-state { font-size: 12px; color: var(--text-tertiary); font-style: italic; padding: 14px 0; text-align: center; }
+    .goal-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 6px; background: rgba(255,255,255,0.035); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); transition: background 0.2s, opacity 0.2s; }
+    .goal-row:hover { background: rgba(255,255,255,0.06); }
+    .goal-drag { width: 14px; opacity: 0; cursor: grab; letter-spacing: -2px; color: var(--text-tertiary); transition: opacity 0.2s; user-select: none; }
+    .goal-row:hover .goal-drag { opacity: 1; }
+    .goal-row.drag-over { border-top: 2px solid var(--warning); }
+    .gm-checkbox { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.2); cursor: pointer; position: relative; transition: all 0.2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .gm-checkbox input { display: none; }
+    .gm-checkbox.checked { background: var(--success); border-color: var(--success); box-shadow: 0 0 12px rgba(107,227,164,0.40); }
+    .gm-checkbox::after { content: '✓'; position: absolute; color: #050506; font-weight: 800; font-size: 14px; opacity: 0; transform: scale(0.5); transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .gm-checkbox.checked::after { opacity: 1; transform: scale(1); }
+    .gm-checkbox.disabled { cursor: not-allowed; opacity: 0.5; }
+    .goal-text { flex: 1; font-size: 14px; outline: none; min-width: 0; word-wrap: break-word; transition: color 0.2s; }
+    .goal-row.is-done { opacity: 0.45; background: rgba(107,227,164,0.04); }
+    .goal-row.is-done .goal-text { text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.4); }
+    .goal-row.is-queued { background: rgba(242,192,99,0.10); box-shadow: inset 3px 0 0 0 var(--warning); }
+    .goal-row.is-queued .goal-text { color: #FFE2A8; }
+    .gm-queue-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); opacity: 0.55; font-size: 14px; transition: all 0.2s; }
+    .gm-queue-btn:hover { opacity: 1; }
+    .gm-queue-btn.active { color: var(--warning); opacity: 1; filter: drop-shadow(0 0 4px rgba(242,192,99,0.65)); }
+    @keyframes queue-pulse { 0%, 100% { background: inherit; transform: scale(1); } 50% { background: rgba(242,192,99,0.32); transform: scale(1.015); } }
+    .is-queue-flashing { animation: queue-pulse 0.48s ease-in-out; }
+    .goal-delete { background: none; border: none; cursor: pointer; color: var(--text-tertiary); opacity: 0; font-size: 16px; transition: opacity 0.2s, color 0.2s; padding: 0 4px; }
+    .goal-row:hover .goal-delete { opacity: 0.5; }
+    .goal-delete:hover { color: var(--danger); opacity: 1 !important; }
+    .show-more-row { text-align: center; padding: 10px; font-size: 12px; color: var(--text-tertiary); cursor: pointer; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 6px; }
+    .show-more-row:hover { background: rgba(255,255,255,0.02); }
+    .gm-push-btn { width: 100%; background: transparent; border: 1px dashed rgba(255,255,255,0.15); color: var(--text-tertiary); padding: 10px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; margin-top: 10px; transition: all 0.2s; }
+    .gm-push-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); background: rgba(255,255,255,0.03); }
+    .gm-push-btn.hidden { display: none; }
+    .gm-input-wrap { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-top: 14px; align-items: center; }
+    .gm-input-wrap input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid transparent; border-radius: 12px; padding: 11px 14px; color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; transition: border 0.2s; }
+    .gm-input-wrap input:focus { border-color: rgba(255,255,255,0.2); }
+    .gm-input-wrap input::placeholder { color: var(--text-tertiary); }
+    .gm-add-btn, .gm-polish-btn { padding: 11px 20px; border-radius: 12px; font-weight: 700; font-size: 11px; cursor: pointer; border: none; transition: all 0.2s; }
+    .gm-add-btn { background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%); color: #0A0A0B; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.2); }
+    .gm-add-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+    .gm-polish-btn { background: rgba(255,255,255,0.04); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.10); }
+    .gm-polish-btn:hover { background: rgba(255,255,255,0.08); }
+    .gm-status-msg { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; min-height: 14px; text-align: right; }
+    .gm-card-tomorrow .gm-progress-row { display: none; }
+    .gm-tomorrow-count { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; font-variant-numeric: tabular-nums; color: var(--text-tertiary); padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.04); height: fit-content; }
+    .tomorrow-sub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="tab-container">
+    <button class="tab-btn active" onclick="openTab(event, 'Overview')">Overview</button>
+    <button class="tab-btn" onclick="openTab(event, 'Health')">Health</button>
+  </div>
+
+  <div id="Overview" class="tab-content active">
+    
+    <div class="container">
+      <h1 class="dash-title">My Dashboard</h1>
+
+      <div class="ticker-row">
+        <div class="goal-ticker" id="goalTicker" aria-live="polite" aria-atomic="true">
+          <div class="goal-ticker-led"><span class="goal-ticker-led-dot"></span></div>
+          <div class="goal-ticker-label">GOALS</div>
+          <div class="goal-ticker-stage" id="goalTickerStage"></div>
+          <div class="goal-ticker-meta" id="goalTickerMeta">0/0</div>
+        </div>
+      </div>
+
+      <div class="day-ring-wrap">
+        <div class="ring-container">
+          <svg class="ring-svg" viewBox="0 0 120 120">
+            <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+            <circle class="ring-fill" id="dayRingFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <div class="ring-center-content">
+            <div class="ring-percent" id="dayRingPercent">—</div>
+            <div class="ring-phase" id="dayRingPhase">LOADING</div>
+            <div class="ring-clock" id="dayRingClock">--:--</div>
+          </div>
+        </div>
+        <div class="ring-details">
+          <div class="ring-status-line" id="dayRingStatus">Loading status...</div>
+          <div class="ring-remaining" id="dayRingRemaining">--h --m</div>
+          <div class="ring-hours">8:00 AM – 12:00 AM</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">To Do List</div>
+
+        <div class="gm-card" id="cardToday">
+          <div class="gm-card-header">
+            <div>
+              <div class="gm-eyebrow" id="todayLabel">Today — Loading</div>
+              <div class="gm-progress-row">
+                <div class="gm-progress-num" id="gmProgressNum">0</div>
+                <div class="gm-progress-total" id="gmProgressTotal">/ 0</div>
+                <div class="gm-progress-label" id="gmProgressLabel">no goals yet</div>
+              </div>
+            </div>
+            <div class="gm-streak" id="gmStreak">
+              <span class="gm-streak-icon">⚡</span>
+              <span class="gm-streak-num" id="gmStreakNum">0</span>
+              <span class="gm-streak-label">day streak</span>
+            </div>
+          </div>
+
+          <div class="gm-bar" id="gmBar"></div>
+
+          <ul class="gm-list" id="goalListToday"></ul>
+          
+          <button class="gm-push-btn hidden" id="gmPushBtn">Push remaining to tomorrow ▾</button>
+
+          <div class="gm-input-wrap">
+            <input type="text" id="goalInput" placeholder="Add a goal for today…">
+            <button class="gm-add-btn" id="goalAddBtn">+ Add</button>
+            <button class="gm-polish-btn" id="goalPolishBtn">✨ Polish</button>
+          </div>
+          <div class="gm-status-msg" id="todayStatus"></div>
+        </div>
+
+        <div class="gm-card gm-card-tomorrow" id="cardTomorrow">
+          <div class="gm-card-header">
+            <div>
+              <div class="gm-eyebrow" id="tomorrowLabel">Plan tomorrow — Loading</div>
+              <div class="tomorrow-sub">Write tonight, locked until 6 AM.</div>
+            </div>
+            <div class="gm-tomorrow-count" id="gmTomorrowCount">0 planned</div>
+          </div>
+
+          <ul class="gm-list" id="goalListTomorrow"></ul>
+
+          <div class="gm-input-wrap">
+            <input type="text" id="tomorrowInput" placeholder="Plan a goal for tomorrow…">
+            <button class="gm-add-btn" id="tomorrowAddBtn">+ Add</button>
+            <button class="gm-polish-btn" id="tomorrowPolishBtn">✨ Polish</button>
+          </div>
+          <div class="gm-status-msg" id="tomorrowStatus"></div>
+        </div>
+      </div>
+    </div> 
+  </div> 
+
+  <div id="Health" class="tab-content">
+    <div id="health-tab" style="padding: 20px; background: rgba(255, 255, 255, 0.04); border-radius: 16px; backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); box-shadow: 0 12px 40px rgba(0,0,0,0.45); color: white;">
+        <h2 style="border-bottom: 2px solid #6BE3A4; padding-bottom: 10px; margin-bottom: 20px;">Google Health Sync</h2>
+        
+        <div id="health-auth-view" style="text-align: center; padding: 40px 20px;">
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Connect your Google Health account to sync your daily metrics.</p>
+            <a href="/api/fitbit/auth" style="padding: 12px 24px; background: #FAFAFA; color: #0A0A0B; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
+                Sync Google Health
+            </a>
+        </div>
+
+        <div id="health-data-view" style="display: none;">
+            
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 30px; border-radius: 12px; text-align: center; border-top: 4px solid #B48EAD; box-shadow: 0 8px 32px rgba(180,142,173,0.15);">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Overall Health</h3>
+                <p style="font-size: 54px; font-weight: 800; margin: 10px 0 0 0; color: #B48EAD;"><span id="tab-healthscore">--</span></p>
+                <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 5px;">(Recovery vs. Strain Balance)</p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 30px; border-radius: 12px; text-align: center; border-top: 4px solid #6BE3A4;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Recovery</h3>
+                <p style="font-size: 54px; font-weight: 800; margin: 10px 0 0 0; color: #6BE3A4;"><span id="tab-recovery">--</span><span style="font-size: 24px;">%</span></p>
+                <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 5px;">(Sleep, RHR, HRV)</p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 30px; border-radius: 12px; text-align: center; border-top: 4px solid #4D96FF;">
+              <h3 style="margin: 0; color: var(--text-tertiary); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Day Strain</h3>
+              <p style="font-size: 54px; font-weight: 800; margin: 10px 0 0 0; color: #4D96FF;"><span id="tab-strain">--</span><span style="font-size: 24px;">%</span></p>
+              <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 5px;">(Scale: 0 - 100%)</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px;">
+            
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Steps</h3>
+                <p id="tab-steps" style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);">--</p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Calories</h3>
+                <p style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);"><span id="tab-calories">--</span> <span style="font-size:10px; color:#888;">kcal</span></p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Active Mins</h3>
+                <p style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);"><span id="tab-active">--</span> <span style="font-size:10px; color:#888;">m</span></p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Sleep</h3>
+                <p id="tab-sleep" style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);">--</p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">RHR</h3>
+                <p style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);"><span id="tab-rhr">--</span> <span style="font-size:10px; color:#888;">bpm</span></p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">HRV</h3>
+                <p style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);"><span id="tab-hrv">--</span> <span style="font-size:10px; color:#888;">ms</span></p>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 12px; text-align: center;">
+                <h3 style="margin: 0; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">SpO2</h3>
+                <p style="font-size: 20px; font-weight: 700; margin: 8px 0 0 0; color: var(--text-primary);"><span id="tab-spo2">--</span> <span style="font-size:10px; color:#888;">%</span></p>
+            </div>
+
+        </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+
+  <script>
+    // --- Configuration & Utils ---
+    const ANTHROPIC_API_KEY = ''; 
+    const WAKE_HOUR = 8;
+    const SLEEP_HOUR = 24;
+
+    const storeGet = (key) => JSON.parse(localStorage.getItem(key) || 'null');
+    const storeSet = (key, val) => {
+      localStorage.setItem(key, JSON.stringify(val));
+      if(key.startsWith('goals:')) window.dispatchEvent(new CustomEvent('goals-changed'));
+    };
+    const storeDelete = (key) => localStorage.removeItem(key);
+
+    function getActiveDateString() {
+      const d = new Date();
+      if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getTomorrowDateString() {
+      const d = new Date();
+      if (d.getHours() >= 6) d.setDate(d.getDate() + 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDate(ymd) {
+      const [y, m, d] = ymd.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    let todayKey = `goals:${getActiveDateString()}`;
+    let tomorrowKey = `goals:${getTomorrowDateString()}`;
+
+    // --- Boot: Rollover & Streak ---
+    function performRollover() {
+      const activeStr = getActiveDateString();
+      const keys = [];
+      for(let i=0; i<localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if(k.startsWith('goals:')) keys.push(k);
+      }
+      
+      let todayGoals = storeGet(todayKey) || [];
+      let todaySet = new Set(todayGoals.map(g => g.text));
+
+      keys.forEach(key => {
+        const dateStr = key.replace('goals:', '');
+        if(dateStr < activeStr) {
+          const oldGoals = storeGet(key) || [];
+          oldGoals.forEach(g => {
+            if(!g.done && !todaySet.has(g.text)) {
+              todayGoals.push({ text: g.text, done: false });
+              todaySet.add(g.text);
+            }
+          });
+          storeDelete(key);
+        }
+      });
+      if(todayGoals.length > 0) storeSet(todayKey, todayGoals);
+    }
+
+    function updateStreak() {
+      const activeStr = getActiveDateString();
+      let streakData = storeGet('goal_streak_v1') || { count: 0, lastProcessedDate: '' };
+      
+      const keys = [];
+      for(let i=0; i<localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if(k.startsWith('goals:')) keys.push(k);
+      }
+      keys.sort();
+
+      keys.forEach(key => {
+        const dateStr = key.replace('goals:', '');
+        if(dateStr < activeStr && dateStr > streakData.lastProcessedDate) {
+          const goals = storeGet(key) || [];
+          if(goals.length > 0) {
+            const allDone = goals.every(g => g.done);
+            if(allDone) streakData.count++;
+            else streakData.count = 0;
+          }
+          streakData.lastProcessedDate = dateStr;
+        }
+      });
+      storeSet('goal_streak_v1', streakData);
+      renderStreak();
+    }
+
+    // --- Component 2: Ticker ---
+    let tickerCycleIdx = 0;
+    let tickerInterval = null;
+    function updateTicker() {
+      const goals = storeGet(todayKey) || [];
+      const total = goals.length;
+      const doneCount = goals.filter(g => g.done).length;
+      
+      let items = [];
+      if(total === 0) {
+        items.push({ status: 'empty', text: 'No goals set for today — add one to get rolling.' });
+      } else if (doneCount === total) {
+        items.push({ status: 'done', text: '✓ All goals done — solid day.' });
+      } else {
+        items = goals.filter(g => !g.done).map(g => ({ status: 'pending', text: g.text }));
+      }
+
+      document.getElementById('goalTickerMeta').innerText = `${doneCount}/${total}`;
+
+      if (tickerCycleIdx >= items.length) tickerCycleIdx = 0;
+      const item = items[tickerCycleIdx];
+
+      const stage = document.getElementById('goalTickerStage');
+      const existing = stage.querySelector('.goal-ticker-row:not(.is-leaving)');
+      
+      if(existing) {
+        existing.classList.add('is-leaving');
+        existing.classList.remove('is-entering');
+        setTimeout(() => existing.remove(), 460);
+      }
+
+      const newRow = document.createElement('div');
+      newRow.className = 'goal-ticker-row is-entering';
+      if(!existing) newRow.classList.remove('is-entering'); 
+
+      let glyph = '·';
+      if(item.status === 'done') glyph = '✓';
+      if(item.status === 'pending') glyph = '○';
+
+      newRow.innerHTML = `
+        <span class="goal-ticker-status" data-status="${item.status}">${glyph}</span>
+        <span class="goal-ticker-text">${item.text}</span>
+      `;
+      stage.appendChild(newRow);
+
+      tickerCycleIdx++;
+    }
+
+    window.addEventListener('goals-changed', () => {
+      tickerCycleIdx = 0;
+      updateTicker();
+      clearInterval(tickerInterval);
+      tickerInterval = setInterval(updateTicker, 5000);
+    });
+
+    // --- Component 3: Day Ring ---
+    const sunPalette = [
+      [255, 216, 158], [255, 205, 121], [255, 227, 143], [255, 183, 106],
+      [255, 149,  89], [243, 111,  79], [226,  93, 122], [123,  91, 176], [ 47,  58, 102]
+    ];
+
+    function interpolateColor(percent) {
+      if(percent <= 0) return sunPalette[0];
+      if(percent >= 100) return sunPalette[8];
+      const scaled = (percent / 100) * 8;
+      const idx = Math.floor(scaled);
+      const rem = scaled - idx;
+      const c1 = sunPalette[idx];
+      const c2 = sunPalette[idx + 1] || sunPalette[8];
+      return [
+        Math.round(c1[0] + (c2[0] - c1[0]) * rem),
+        Math.round(c1[1] + (c2[1] - c1[1]) * rem),
+        Math.round(c1[2] + (c2[2] - c1[2]) * rem)
+      ];
+    }
+
+    function updateDayBar() {
+      const now = new Date();
+      const hrs = now.getHours();
+      const mins = now.getMinutes();
+      const decHours = hrs + mins / 60 + now.getSeconds() / 3600;
+      
+      const clockStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      document.getElementById('dayRingClock').innerText = clockStr;
+
+      const fill = document.getElementById('dayRingFill');
+      const pctEl = document.getElementById('dayRingPercent');
+      const phaseEl = document.getElementById('dayRingPhase');
+      const statusEl = document.getElementById('dayRingStatus');
+      const remEl = document.getElementById('dayRingRemaining');
+      const circ = 326.7;
+
+      if(decHours < WAKE_HOUR) {
+        fill.style.strokeDashoffset = circ;
+        fill.style.stroke = '#4D4B47';
+        pctEl.innerText = '—';
+        phaseEl.innerText = 'SLEEPING';
+        statusEl.innerText = '😴 Still sleeping';
+        
+        let remMins = Math.floor((WAKE_HOUR - decHours) * 60);
+        let rh = Math.floor(remMins / 60);
+        let rm = remMins % 60;
+        remEl.innerText = `${rh}h ${rm}m until wake-up`;
+      } else if (decHours >= SLEEP_HOUR) {
+        fill.style.strokeDashoffset = 0;
+        fill.style.stroke = '#E25D7A';
+        pctEl.innerText = '100%';
+        phaseEl.innerText = 'PAST BEDTIME';
+        statusEl.innerText = '⚠️ Past bedtime';
+        remEl.innerText = 'Sleep!';
+      } else {
+        const pct = ((decHours - WAKE_HOUR) / (SLEEP_HOUR - WAKE_HOUR)) * 100;
+        fill.style.strokeDashoffset = circ * (1 - pct/100);
+        const rgb = interpolateColor(pct);
+        fill.style.stroke = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        
+        pctEl.innerText = `${Math.floor(pct)}%`;
+        
+        if (pct < 25) { phaseEl.innerText='MORNING'; statusEl.innerText='☀️ Morning — fresh start'; }
+        else if (pct < 50) { phaseEl.innerText='MIDDAY'; statusEl.innerText='⚡ Midday — keep moving'; }
+        else if (pct < 75) { phaseEl.innerText='AFTERNOON'; statusEl.innerText='🔥 Afternoon — push it'; }
+        else if (pct < 90) { phaseEl.innerText='EVENING'; statusEl.innerText='⏳ Evening — wrap up'; }
+        else { phaseEl.innerText='BEDTIME'; statusEl.innerText='🌙 Bedtime soon'; }
+
+        let remMins = Math.floor((SLEEP_HOUR - decHours) * 60);
+        let rh = Math.floor(remMins / 60);
+        let rm = remMins % 60;
+        remEl.innerText = `${rh}h ${rm}m awake time left`;
+      }
+    }
+
+    // --- Component 4: To Do List Rendering ---
+    let showMoreState = { today: false, tomorrow: false };
+
+    function renderTodayHeader() {
+      const goals = storeGet(todayKey) || [];
+      const total = goals.length;
+      const done = goals.filter(g => g.done).length;
+      
+      document.getElementById('gmProgressNum').innerText = done;
+      document.getElementById('gmProgressTotal').innerText = `/ ${total}`;
+      
+      const label = document.getElementById('gmProgressLabel');
+      const card = document.getElementById('cardToday');
+      if (total === 0) {
+        label.innerText = 'no goals yet';
+        card.classList.remove('gm-all-done');
+      } else if (done === total) {
+        label.innerText = 'all done — solid day';
+        card.classList.add('gm-all-done');
+      } else {
+        label.innerText = 'complete';
+        card.classList.remove('gm-all-done');
+      }
+
+      const bar = document.getElementById('gmBar');
+      bar.innerHTML = '';
+      goals.forEach(g => {
+        const seg = document.createElement('div');
+        seg.className = `gm-bar-seg ${g.done ? 'gm-bar-seg-done' : ''}`;
+        bar.appendChild(seg);
+      });
+
+      const pushBtn = document.getElementById('gmPushBtn');
+      if(total > 0 && done < total) pushBtn.classList.remove('hidden');
+      else pushBtn.classList.add('hidden');
+    }
+
+    function renderStreak() {
+      const streakData = storeGet('goal_streak_v1') || { count: 0 };
+      const el = document.getElementById('gmStreak');
+      document.getElementById('gmStreakNum').innerText = streakData.count;
+      if(streakData.count > 0) el.classList.add('gm-streak-active');
+      else el.classList.remove('gm-streak-active');
+    }
+
+    function renderTomorrowCount() {
+      const goals = storeGet(tomorrowKey) || [];
+      document.getElementById('gmTomorrowCount').innerText = `${goals.length} planned`;
+    }
+
+    function buildGoalRow(g, i, key, readOnly) {
+      const li = document.createElement('li');
+      li.className = `goal-row ${g.done ? 'is-done' : ''} ${g.queued ? 'is-queued' : ''}`;
+      li.draggable = true;
+      li.dataset.idx = i;
+      li.dataset.key = key;
+
+      const drag = `<div class="goal-drag" title="Drag to reorder">⋮⋮</div>`;
+      
+      let cbClass = `gm-checkbox ${g.done ? 'checked' : ''} ${readOnly ? 'disabled' : ''}`;
+      let cbTitle = readOnly ? 'Activates at 6 AM tomorrow' : '';
+      const checkbox = `<div class="${cbClass}" title="${cbTitle}"><input type="checkbox" ${g.done ? 'checked' : ''} ${readOnly ? 'disabled' : ''}></div>`;
+
+      const text = `<div class="goal-text">${g.text}</div>`;
+      
+      let qClass = `gm-queue-btn ${g.queued ? 'active' : ''}`;
+      const queue = readOnly ? '' : `<button class="${qClass}" title="Queue for focus">⚡</button>`;
+      
+      const del = `<button class="goal-delete" title="Delete">×</button>`;
+
+      li.innerHTML = drag + checkbox + text + queue + del;
+
+      if(!readOnly) {
+        const cbDiv = li.querySelector('.gm-checkbox');
+        cbDiv.addEventListener('click', (e) => {
+          if(e.target.tagName !== 'INPUT') {
+            const input = cbDiv.querySelector('input');
+            input.checked = !input.checked;
+          }
+          const goals = storeGet(key);
+          goals[i].done = !goals[i].done;
+          if(goals[i].done) goals[i].doneAt = Date.now();
+          else delete goals[i].doneAt;
+          storeSet(key, goals);
+          if(key === todayKey) loadToday();
+        });
+
+        const qBtn = li.querySelector('.gm-queue-btn');
+        if(qBtn) {
+          qBtn.addEventListener('click', () => {
+            const goals = storeGet(key);
+            goals[i].queued = !goals[i].queued;
+            storeSet(key, goals);
+            li.classList.add('is-queue-flashing');
+            setTimeout(() => { if(key === todayKey) loadToday(); }, 480);
+          });
+        }
+      }
+
+      const textEl = li.querySelector('.goal-text');
+      textEl.addEventListener('click', () => {
+        textEl.contentEditable = true;
+        textEl.focus();
+        const sel = window.getSelection();
+        sel.selectAllChildren(textEl);
+        sel.collapseToEnd();
+      });
+      textEl.addEventListener('blur', () => commitEdit(textEl, key, i, g.text));
+      textEl.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
+        if(e.key === 'Escape') { textEl.innerText = g.text; textEl.blur(); }
+      });
+
+      const delBtn = li.querySelector('.goal-delete');
+      delBtn.addEventListener('click', () => {
+        const goals = storeGet(key);
+        goals.splice(i, 1);
+        storeSet(key, goals);
+        if(key === todayKey) loadToday(); else loadTomorrow();
+      });
+
+      li.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', i);
+        e.dataTransfer.setData('sourceKey', key);
+      });
+      li.addEventListener('dragover', (e) => { e.preventDefault(); li.classList.add('drag-over'); });
+      li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+      li.addEventListener('drop', (e) => {
+        e.preventDefault();
+        li.classList.remove('drag-over');
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+        const sourceKey = e.dataTransfer.getData('sourceKey');
+        if (sourceKey !== key || fromIdx === i) return;
+        
+        const goals = storeGet(key);
+        const [moved] = goals.splice(fromIdx, 1);
+        goals.splice(i, 0, moved);
+        storeSet(key, goals);
+        if(key === todayKey) loadToday(); else loadTomorrow();
+      });
+
+      return li;
+    }
+
+    function commitEdit(el, key, idx, oldText) {
+      el.contentEditable = false;
+      let newText = el.innerText.trim();
+      if(!newText) newText = oldText;
+      if(newText !== oldText) {
+        const goals = storeGet(key);
+        goals[idx].text = newText;
+        storeSet(key, goals);
+      }
+      el.innerText = newText;
+    }
+
+    function renderListInto(goals, listEl, listId, emptyText, key, readOnly) {
+      listEl.innerHTML = '';
+      if(goals.length === 0) {
+        listEl.innerHTML = `<div class="empty-state">${emptyText}</div>`;
+      } else {
+        const listType = key === todayKey ? 'today' : 'tomorrow';
+        const limit = 5;
+        const showingAll = showMoreState[listType] || goals.length <= limit;
+        
+        const renderGoals = showingAll ? goals : goals.slice(0, limit);
+        renderGoals.forEach((g, i) => {
+          listEl.appendChild(buildGoalRow(g, i, key, readOnly));
+        });
+
+        if (goals.length > limit) {
+          const toggle = document.createElement('div');
+          toggle.className = 'show-more-row';
+          toggle.innerText = showingAll ? 'Show less ▴' : `Show ${goals.length - limit} more ▾`;
+          toggle.addEventListener('click', () => {
+            showMoreState[listType] = !showMoreState[listType];
+            if(key === todayKey) loadToday(); else loadTomorrow();
+          });
+          listEl.appendChild(toggle);
+        }
+      }
+
+      if(key === todayKey) renderTodayHeader();
+      else renderTomorrowCount();
+    }
+
+    function loadToday() {
+      const goals = storeGet(todayKey) || [];
+      renderListInto(goals, document.getElementById('goalListToday'), 'goalListToday', 'No goals for today yet — add one below.', todayKey, false);
+    }
+
+    function loadTomorrow() {
+      const goals = storeGet(tomorrowKey) || [];
+      renderListInto(goals, document.getElementById('goalListTomorrow'), 'goalListTomorrow', 'Nothing planned for tomorrow yet', tomorrowKey, true);
+    }
+
+    function makeAddHandlers(inputId, addBtnId, polishBtnId, key, statusId, reloadFn) {
+      const input = document.getElementById(inputId);
+      const addBtn = document.getElementById(addBtnId);
+      const polishBtn = document.getElementById(polishBtnId);
+      const statusEl = document.getElementById(statusId);
+
+      const showStatus = (msg, color = 'var(--text-tertiary)') => {
+        statusEl.innerText = msg;
+        statusEl.style.color = color;
+        setTimeout(() => { if(statusEl.innerText === msg) statusEl.innerText = ''; }, 3500);
+      };
+
+      const doAdd = (text) => {
+        text = text.trim();
+        if(!text) return;
+        const goals = storeGet(key) || [];
+        goals.push({ text, done: false });
+        storeSet(key, goals);
+        input.value = '';
+        reloadFn();
+      };
+
+      addBtn.addEventListener('click', () => doAdd(input.value));
+      input.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter') { e.preventDefault(); doAdd(input.value); }
+      });
+
+      polishBtn.addEventListener('click', async () => {
+        const raw = input.value.trim();
+        if(!raw) return;
+        
+        if(!ANTHROPIC_API_KEY) {
+          doAdd(raw);
+          showStatus('Polish needs an Anthropic API key — added as-typed.');
+          return;
+        }
+
+        polishBtn.innerText = '⏳';
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 1000,
+              messages: [{
+                role: 'user',
+                content: `Clean up this task text to be clear, actionable, and concise. Return EXACTLY a one-element JSON array of strings containing the polished task. No markdown fences, no extra text. Task: ${raw}`
+              }]
+            })
+          });
+          const data = await res.json();
+          const parsed = JSON.parse(data.content[0].text.trim());
+          doAdd(parsed[0]);
+        } catch(e) {
+          doAdd(raw);
+          showStatus('Polish failed — added as-typed.', 'var(--danger)');
+        } finally {
+          polishBtn.innerText = '✨ Polish';
+        }
+      });
+    }
+
+    document.getElementById('gmPushBtn').addEventListener('click', () => {
+      if(!confirm('Push all remaining tasks to tomorrow?')) return;
+      let tGoals = storeGet(todayKey) || [];
+      let tmrwGoals = storeGet(tomorrowKey) || [];
+      
+      const tmrwSet = new Set(tmrwGoals.map(g => g.text));
+      const keptToday = [];
+      
+      tGoals.forEach(g => {
+        if(g.done) {
+          keptToday.push(g);
+        } else {
+          if(!tmrwSet.has(g.text)) {
+            tmrwGoals.push({ text: g.text, done: false });
+            tmrwSet.add(g.text);
+          }
+        }
+      });
+
+      storeSet(todayKey, keptToday);
+      storeSet(tomorrowKey, tmrwGoals);
+      loadToday();
+      loadTomorrow();
+    });
+
+    document.getElementById('todayLabel').innerText = `Today — ${formatDate(getActiveDateString())}`;
+    document.getElementById('tomorrowLabel').innerText = `Plan tomorrow — ${formatDate(getTomorrowDateString())}`;
+
+    performRollover();
+    updateStreak();
+
+    makeAddHandlers('goalInput', 'goalAddBtn', 'goalPolishBtn', todayKey, 'todayStatus', loadToday);
+    makeAddHandlers('tomorrowInput', 'tomorrowAddBtn', 'tomorrowPolishBtn', tomorrowKey, 'tomorrowStatus', loadTomorrow);
+
+    loadToday();
+    loadTomorrow();
+    
+    updateTicker();
+    tickerInterval = setInterval(updateTicker, 5000);
+
+    updateDayBar();
+    setInterval(updateDayBar, 60000);
+  </script>
+
+<script>
+  function openTab(evt, tabName) {
+      const tabContents = document.getElementsByClassName("tab-content");
+      for (let i = 0; i < tabContents.length; i++) {
+          tabContents[i].style.display = "none";
+      }
+      const tabLinks = document.getElementsByClassName("tab-btn");
+      for (let i = 0; i < tabLinks.length; i++) {
+          tabLinks[i].classList.remove("active");
+      }
+      const targetTab = document.getElementById(tabName);
+      if (targetTab) targetTab.style.display = "block";
+      
+      if (evt && evt.currentTarget) {
+          evt.currentTarget.classList.add("active");
+      } else {
+          const targetBtn = document.querySelector(`[onclick*="'${tabName}'"]`);
+          if (targetBtn) targetBtn.classList.add("active");
+      }
+  }
+
+  async function initHealthTab() {
+      try {
+          const response = await fetch('/api/health-data');
+          
+          if (response.status === 401) {
+              console.log("Health Tab: Awaiting Google Authentication.");
+              document.getElementById('health-auth-view').style.display = 'block';
+              document.getElementById('health-data-view').style.display = 'none';
+              return; 
+          }
+
+          const data = await response.json();
+
+          if (data) {
+                document.getElementById('health-auth-view').style.display = 'none';
+                document.getElementById('health-data-view').style.display = 'block';
+                
+                document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
+                document.getElementById('tab-strain').innerText = data.strain || '--';
+                document.getElementById('tab-recovery').innerText = data.recovery || '--';
+
+                document.getElementById('tab-steps').innerText = data.steps || '--';
+                document.getElementById('tab-calories').innerText = data.calories || '--';
+                document.getElementById('tab-active').innerText = data.activeMins || '--';
+                document.getElementById('tab-sleep').innerText = data.sleep || '--';
+                document.getElementById('tab-rhr').innerText = data.rhr || '--';
+                document.getElementById('tab-hrv').innerText = data.hrv || '--';
+                
+                // SP02 WIRING ADDED HERE!
+                document.getElementById('tab-spo2').innerText = data.spo2 || '--';
+            }
+      } catch (error) {
+          console.error("Health Tab Failed to Load:", error);
+      }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('tab') === 'health') {
+          openTab(null, 'Health');
+      } else {
+          openTab(null, 'Overview'); 
+      }
+      initHealthTab();
+  });
+</script>
+
+</body>
+</html>
