@@ -728,12 +728,15 @@
       } catch (err) { console.error("Chart Render Failed:", err); }
     }
 
-    // --- 💾 Auto-Save & Health API Integration ---
-    async function initHealthTab() {
+    // --- 💾 Auto-Save & Health API Integration ---async function initHealthTab() {
       try {
         const response = await fetch('/api/health-data');
-        if (response.status === 401) {
+        
+        // THE FIX: If the response fails for ANY reason (401, 500, etc)
+        // Show the Sync button and stop trying to render the page.
+        if (!response.ok) {
           document.getElementById('health-auth-view').style.display = 'flex';
+          document.getElementById('health-data-view').style.display = 'none';
           return;
         }
         
@@ -741,6 +744,7 @@
         if (data) {
           document.getElementById('health-auth-view').style.display = 'none';
           document.getElementById('health-data-view').style.display = 'block';
+          // ... (keep the rest of your data mapping code here)
           
           document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
           document.getElementById('tab-recovery').innerText = data.recovery || '--';
@@ -774,8 +778,7 @@
           generateMorningBriefing(); 
         }
       } catch (error) { console.error("Health Tab Failed:", error); }
-    }
-
+    
     // --- 🧠 Gemini AI Logic ---
     async function callGemini(task, content, contextData = {}) {
       try {
@@ -894,6 +897,40 @@
     document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
     document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
     document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
+    
+    // --- 🧠 AI Coach Button Logic ---
+    async function askCoach() {
+      const btn = document.querySelector('button[onclick="askCoach()"]');
+      const originalText = btn.innerText;
+      btn.innerText = "Analyzing...";
+      
+      try {
+        // Grab the live numbers directly from the dashboard UI
+        const reqBody = {
+          strain: document.getElementById('tab-strain').innerText,
+          recovery: document.getElementById('tab-recovery').innerText,
+          healthScore: document.getElementById('tab-healthscore').innerText,
+          sleep: document.getElementById('tab-sleep').innerText,
+          activeMins: document.getElementById('tab-active').innerText
+        };
+        
+        // Send them to your backend AI route
+        const res = await fetch('/api/ai-coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reqBody)
+        });
+        
+        const data = await res.json();
+        
+        // Print the AI's response to the box
+        document.getElementById('ai-response').innerText = data.advice || data.error;
+      } catch (err) {
+        document.getElementById('ai-response').innerText = "Coach offline. Check connection.";
+      }
+      
+      btn.innerText = originalText;
+    }
     // --- Init ---
     window.addEventListener('DOMContentLoaded', () => {
       initWeather();

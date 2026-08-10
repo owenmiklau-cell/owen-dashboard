@@ -14,7 +14,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const TOKEN_PATH = path.join(__dirname, 'tokens.json');
 
 // --- 🗄️ CLOUD DATABASE SYSTEM (MONGODB) ---
 mongoose.connect(process.env.MONGO_URI)
@@ -35,28 +34,39 @@ const daySchema = new mongoose.Schema({
 
 const DayLog = mongoose.model('DayLog', daySchema);
 
+// --- 🔐 AUTH TOKEN SCHEMA ---
+const tokenSchema = new mongoose.Schema({
+    identifier: { type: String, default: 'primary_user', unique: true },
+    refreshToken: String
+});
+const AuthToken = mongoose.model('AuthToken', tokenSchema);
 // --- 🔐 PERSISTENT TOKEN MANAGEMENT ---
 let storedAccessToken = null;
 let tokenExpiresAt = null;
 
-function getSavedRefreshToken() {
-    if (fs.existsSync(TOKEN_PATH)) {
-        const data = fs.readFileSync(TOKEN_PATH, 'utf8');
-        return JSON.parse(data).refreshToken;
+async function getSavedRefreshToken() {
+    try {
+        const doc = await AuthToken.findOne({ identifier: 'primary_user' });
+        return doc ? doc.refreshToken : null;
+    } catch (err) {
+        console.error("Error reading token from DB:", err);
+        return null;
     }
-    return null;
 }
 
-function saveRefreshToken(token) {
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify({ refreshToken: token }));
-}
-
-async function getValidAccessToken() {
-    if (storedAccessToken && tokenExpiresAt && Date.now() < tokenExpiresAt - 120000) {
-        return storedAccessToken;
+async function saveRefreshToken(token) {
+    try {
+        await AuthToken.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { refreshToken: token },
+            { upsert: true, new: true }
+        );
+        console.log("💾 Refresh token securely saved to MongoDB Cloud!");
+    } catch (err) {
+        console.error("Error saving token to DB:", err);
     }
-
-    const savedRefreshToken = getSavedRefreshToken();
+}
+const savedRefreshToken = await getSavedRefreshToken(); // NEW
 
     if (savedRefreshToken) {
         try {
@@ -85,7 +95,6 @@ async function getValidAccessToken() {
     }
 
     throw new Error("No authentication credentials found. Please log in.");
-}
 
 // --- 🔐 AUTHENTICATION ROUTES ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
