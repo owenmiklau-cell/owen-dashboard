@@ -1159,7 +1159,7 @@
       historyBox.scrollTop = historyBox.scrollHeight;
     }
 
-    // --- 🧠 MINDSET, JOURNAL & VAULT ENGINE ---
+// --- 🧠 MINDSET, JOURNAL & VAULT ENGINE ---
     let masterHabitList = [];
     let isEditingHabits = false;
 
@@ -1170,7 +1170,6 @@
             return;
         }
 
-        // Glitch Fix: Build the HTML securely before pushing it to the screen
         let html = '';
         masterHabitList.forEach((habit, idx) => {
             const safeId = 'habit-' + idx;
@@ -1181,14 +1180,25 @@
                     <input type="checkbox" id="${safeId}" data-name="${escapedHabit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-purple);">
                     <div class="goal-text" style="font-weight: 600;">${habit}</div>
                 </label>
-                ${isEditingHabits ? `<button onclick="window.deleteHabit(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; font-weight: bold;">×</button>` : ''}
+                ${isEditingHabits ? `<button class="delete-habit-btn" data-index="${idx}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; font-weight: bold;">×</button>` : ''}
             </div>`;
         });
         container.innerHTML = html;
 
+        // 1. Re-attach Checkbox Listeners
         document.querySelectorAll('.habit-check').forEach(box => {
             box.addEventListener('change', saveJournal);
         });
+
+        // 2. THE FIX: Attach Delete Button Listeners Natively
+        if (isEditingHabits) {
+            document.querySelectorAll('.delete-habit-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const idx = parseInt(e.target.getAttribute('data-index'));
+                    await deleteHabit(idx);
+                });
+            });
+        }
     }
 
     async function loadJournal() {
@@ -1210,7 +1220,7 @@
             });
             
             await renderHabitChart();
-            await loadVault(); // Boots up the Cognitive Vault
+            await loadVault(); 
         } catch(e) { console.error("Failed to load journal ecosystem"); }
     }
 
@@ -1237,7 +1247,7 @@
             btn.style.background = "var(--accent-green)";
             btn.innerText = "✓ Saved!";
             renderHabitChart(); 
-            loadVault(); // Immediately updates the Vault if I generated a new title
+            loadVault(); 
         } catch (err) { btn.innerText = "Error"; }
         
         setTimeout(() => {
@@ -1246,14 +1256,25 @@
         }, 2000);
     }
 
-    // --- Glitch-Free Edit Logic ---
+    // Natively handles the deletion and UI reload
+    async function deleteHabit(index) {
+        masterHabitList.splice(index, 1);
+        renderHabitUI(); // Update UI instantly
+        
+        await fetch('/api/habits/master', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ habitList: masterHabitList })
+        });
+        await loadJournal(); // Re-sync background data
+    }
+
     document.getElementById('btn-edit-habits').addEventListener('click', () => {
         isEditingHabits = !isEditingHabits;
         document.getElementById('habit-edit-ui').style.display = isEditingHabits ? 'block' : 'none';
         document.getElementById('btn-edit-habits').innerText = isEditingHabits ? 'Done' : '⚙ Edit';
         renderHabitUI();
         
-        // Ensure checkboxes stay checked when toggling edit mode
         const today = getActiveDateString();
         fetch(`/api/journal?date=${today}`).then(res => res.json()).then(data => {
             const completedHabits = data.habits || {};
@@ -1270,8 +1291,8 @@
         
         masterHabitList.push(text);
         input.value = '';
+        renderHabitUI();
         
-        // Wait for the database to lock it in BEFORE reloading the UI
         await fetch('/api/habits/master', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1279,17 +1300,6 @@
         });
         await loadJournal(); 
     });
-
-    window.deleteHabit = async function(index) {
-        masterHabitList.splice(index, 1);
-        
-        await fetch('/api/habits/master', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ habitList: masterHabitList })
-        });
-        await loadJournal();
-    };
 
     async function renderHabitChart() {
         try {
