@@ -920,8 +920,9 @@
                     <div style="font-weight: 800; font-size: 16px;">${stock.symbol}</div>
                     <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">${stock.shares} Shares</div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-family: var(--font-mono); color: var(--text-primary); font-size: 16px;">${stock.valueStr}</div>
+                <<div style="text-align: right;">
+                    <div id="position-value-${idx}" style="font-family: var(--font-mono); color: var(--text-primary); font-size: 16px;">${stock.valueStr}</div>
+                    
                     <div id="live-price-${idx}" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Fetching live price...</div>
                 </div>
               </div>
@@ -934,38 +935,51 @@
                 const res = await fetch(`/api/stocks?symbols=${symbolsToFetch.join(',')}`);
                 const liveData = await res.json();
                 
-                let dayChangeTotal = 0; // Tracks the total dollar swing
+                let dayChangeTotal = 0; 
+                let livePortfolioTotal = 0; // NEW: Track the true live grand total
                 
                 holdings.forEach((stock, idx) => {
                    const displayEl = document.getElementById(`live-price-${idx}`);
+                   const valueEl = document.getElementById(`position-value-${idx}`); // NEW: Target the main dollar amount
                    
                    if (stock.symbol === 'CASH (SPAXX)') {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Pegged to $1.00</span>`;
+                       livePortfolioTotal += stock.valueNum; // Add cash to the live total
+                       
                    } else if(liveData && liveData[stock.symbol]) {
-                       const price = liveData[stock.symbol].price.toFixed(2);
+                       const price = liveData[stock.symbol].price;
                        const change = liveData[stock.symbol].changePercent.toFixed(2);
                        const changeAmt = liveData[stock.symbol].changeAmount;
                        
-                       // Multiply the live change by your exact share count
+                       // 🧮 LIVE MATH: Shares * Live Price
+                       const livePosValue = stock.shares * price;
+                       livePortfolioTotal += livePosValue; 
                        dayChangeTotal += (changeAmt * stock.shares);
+
+                       // Overwrite the old CSV value with the new live dollar value
+                       valueEl.innerText = '$' + livePosValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
                        const color = change >= 0 ? 'var(--accent-green)' : 'var(--danger)';
                        const sign = change > 0 ? '+' : '';
-                       displayEl.innerHTML = `Live: $${price} <span style="color: ${color}; font-weight: 600;">(${sign}${change}%)</span>`;
+                       displayEl.innerHTML = `Live: $${price.toFixed(2)} <span style="color: ${color}; font-weight: 600;">(${sign}${change}%)</span>`;
                    } else {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Market Closed / Data Offline</span>`;
+                       livePortfolioTotal += stock.valueNum; // Fallback to saved CSV value if offline
                    }
                 });
                 
-                // 3. Render the Total Day Change underneath the main balance
+                // Overwrite the main Grand Total at the top of the page with the real-time sum
+                document.getElementById('portfolio-total').innerText = '$' + livePortfolioTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                // Render the Total Day Change
                 const dayChangeEl = document.getElementById('portfolio-day-change');
                 if (dayChangeTotal !== 0) {
                     const isPositive = dayChangeTotal >= 0;
                     const color = isPositive ? 'var(--accent-green)' : 'var(--danger)';
                     const sign = isPositive ? '+' : '';
                     
-                    // Calculate portfolio-wide percentage change
-                    const prevTotal = totalValue - dayChangeTotal;
+                    // Percentage based on the live total minus today's swing
+                    const prevTotal = livePortfolioTotal - dayChangeTotal;
                     const totalPercent = prevTotal > 0 ? ((dayChangeTotal / prevTotal) * 100).toFixed(2) : '0.00';
                     
                     const formattedDollar = Math.abs(dayChangeTotal).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
