@@ -361,11 +361,15 @@ app.post('/api/portfolio', async (req, res) => {
 });
 
 // --- ⚙️ DYNAMIC HABIT & JOURNAL ROUTES ---
-app.get('/api/habits/master', async (req, res) => {
+app.post('/api/habits/master', async (req, res) => {
     try {
-        const doc = await Settings.findOne({ identifier: 'primary_user' });
-        res.json(doc ? doc.habitList : ['Hydration (1 Gallon)', '10 Mins Match Visualization', 'Mobility / Deep Stretching', 'Read 15 Pages']);
-    } catch (err) { res.status(500).json({ error: "Failed to fetch habits" }); }
+        await Settings.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { $set: { habitList: req.body.habitList } }, // Forces MongoDB to overwrite the array
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
 });
 
 app.post('/api/journal', async (req, res) => {

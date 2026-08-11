@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Athlete OS | Elite Dashboard</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Marvin OS">
+  
+  <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=f97316&size=512&bold=true">
+  <link rel="icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=f97316&size=64&bold=true">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -399,16 +405,12 @@
       
       <div class="gm-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div>
-                <div class="section-title" style="margin: 0;">Core Habits</div>
-            </div>
+            <div><div class="section-title" style="margin: 0;">Core Habits</div></div>
             <button id="btn-edit-habits" style="background: transparent; color: var(--accent-purple); border: none; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;">⚙ Edit</button>
         </div>
-        
         <div style="display: flex; flex-direction: column; gap: 12px;" id="habit-container">
             <div style="color: var(--text-tertiary); font-size: 14px;">Loading habits...</div>
         </div>
-        
         <div id="habit-edit-ui" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--card-border);">
             <div class="gm-input-wrap" style="margin-top: 0;">
                 <input type="text" id="new-habit-input" placeholder="Add a new daily habit...">
@@ -422,15 +424,11 @@
          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
              <div class="section-title" style="margin: 0;">Habit Consistency</div>
              <select id="chart-timeframe" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
-                 <option value="7">7 Days</option>
-                 <option value="30" selected>30 Days</option>
-                 <option value="90">90 Days</option>
-                 <option value="0">All Time</option>
+                 <option value="7">7 Days</option><option value="30" selected>30 Days</option>
+                 <option value="90">90 Days</option><option value="0">All Time</option>
              </select>
          </div>
-         <div class="chart-container">
-           <canvas id="habitChart"></canvas>
-         </div>
+         <div class="chart-container"><canvas id="habitChart"></canvas></div>
       </div>
 
       <div class="gm-card">
@@ -447,18 +445,16 @@
         <div class="ai-header">
           <h3><span style="font-size: 24px;">🧠</span> Marvin (Psychology)</h3>
         </div>
-        <div id="mindset-ai-response" class="ai-response-box">
-          Analyzing mindset...
-        </div>
+        <div id="mindset-ai-response" class="ai-response-box">Analyzing mindset...</div>
       </div>
 
       <div class="section-title" style="margin-top: 12px;">The Cognitive Vault</div>
-      <div class="gm-card" id="journal-vault" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+      <div class="gm-card" id="journal-vault" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
          <div style="color: var(--text-tertiary); font-size: 14px;">Loading archives...</div>
       </div>
 
     </div>
-  </div>
+</div>
 
   <div id="ai-bottom-bar" class="bottom-bar collapsed">
     <div class="chat-header" id="chat-header-toggle">
@@ -1163,30 +1159,32 @@
       historyBox.scrollTop = historyBox.scrollHeight;
     }
 
-    // --- 🧠 MINDSET & JOURNAL ENGINE ---
+    // --- 🧠 MINDSET, JOURNAL & VAULT ENGINE ---
     let masterHabitList = [];
     let isEditingHabits = false;
 
-    async function renderHabitUI() {
+    function renderHabitUI() {
         const container = document.getElementById('habit-container');
-        container.innerHTML = '';
-        
         if (masterHabitList.length === 0) {
             container.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px;">No habits set. Click Edit to add some.</div>';
             return;
         }
 
+        // Glitch Fix: Build the HTML securely before pushing it to the screen
+        let html = '';
         masterHabitList.forEach((habit, idx) => {
             const safeId = 'habit-' + idx;
-            container.innerHTML += `
+            const escapedHabit = habit.replace(/"/g, '&quot;');
+            html += `
             <div class="goal-row" style="justify-content: space-between;">
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 12px; flex: 1;">
-                    <input type="checkbox" id="${safeId}" data-name="${habit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-purple);">
+                    <input type="checkbox" id="${safeId}" data-name="${escapedHabit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-purple);">
                     <div class="goal-text" style="font-weight: 600;">${habit}</div>
                 </label>
                 ${isEditingHabits ? `<button onclick="window.deleteHabit(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; font-weight: bold;">×</button>` : ''}
             </div>`;
         });
+        container.innerHTML = html;
 
         document.querySelectorAll('.habit-check').forEach(box => {
             box.addEventListener('change', saveJournal);
@@ -1197,7 +1195,7 @@
         try {
             const masterRes = await fetch('/api/habits/master');
             masterHabitList = await masterRes.json();
-            await renderHabitUI();
+            renderHabitUI();
 
             const today = getActiveDateString();
             const res = await fetch(`/api/journal?date=${today}`);
@@ -1212,7 +1210,7 @@
             });
             
             await renderHabitChart();
-            await loadVault(); // Fetch the archive
+            await loadVault(); // Boots up the Cognitive Vault
         } catch(e) { console.error("Failed to load journal ecosystem"); }
     }
 
@@ -1238,8 +1236,8 @@
             });
             btn.style.background = "var(--accent-green)";
             btn.innerText = "✓ Saved!";
-            await renderHabitChart(); 
-            await loadVault(); // Refresh the archive after saving
+            renderHabitChart(); 
+            loadVault(); // Immediately updates the Vault if I generated a new title
         } catch (err) { btn.innerText = "Error"; }
         
         setTimeout(() => {
@@ -1248,12 +1246,21 @@
         }, 2000);
     }
 
-    // --- GLITCH FIX: Force the app to wait for the database to finish saving ---
+    // --- Glitch-Free Edit Logic ---
     document.getElementById('btn-edit-habits').addEventListener('click', () => {
         isEditingHabits = !isEditingHabits;
         document.getElementById('habit-edit-ui').style.display = isEditingHabits ? 'block' : 'none';
         document.getElementById('btn-edit-habits').innerText = isEditingHabits ? 'Done' : '⚙ Edit';
         renderHabitUI();
+        
+        // Ensure checkboxes stay checked when toggling edit mode
+        const today = getActiveDateString();
+        fetch(`/api/journal?date=${today}`).then(res => res.json()).then(data => {
+            const completedHabits = data.habits || {};
+            document.querySelectorAll('.habit-check').forEach(box => {
+                box.checked = completedHabits[box.getAttribute('data-name')] === true;
+            });
+        });
     });
 
     document.getElementById('btn-add-habit').addEventListener('click', async () => {
@@ -1263,8 +1270,8 @@
         
         masterHabitList.push(text);
         input.value = '';
-        renderHabitUI();
         
+        // Wait for the database to lock it in BEFORE reloading the UI
         await fetch('/api/habits/master', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1275,7 +1282,6 @@
 
     window.deleteHabit = async function(index) {
         masterHabitList.splice(index, 1);
-        renderHabitUI();
         
         await fetch('/api/habits/master', {
             method: 'POST',
@@ -1316,22 +1322,50 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            suggestedMax: masterHabitList.length || 4, 
-                            grid: { color: 'rgba(255,255,255,0.05)' }, 
-                            ticks: { color: '#71717A', stepSize: 1 } 
-                        },
-                        x: { 
-                            grid: { display: false }, 
-                            ticks: { color: '#71717A', maxTicksLimit: 14 } 
-                        }
+                        y: { beginAtZero: true, suggestedMax: masterHabitList.length || 4, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', stepSize: 1 } },
+                        x: { grid: { display: false }, ticks: { color: '#71717A', maxTicksLimit: 14 } }
                     }
                 }
             });
         } catch (err) { console.error("Chart Failed", err); }
     }
 
+    async function loadVault() {
+        try {
+            const res = await fetch('/api/journal/history?days=0');
+            const history = await res.json();
+            
+            const vault = document.getElementById('journal-vault');
+            vault.innerHTML = '';
+            
+            if (history.length === 0) {
+                vault.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px; padding: 16px;">Vault is empty. Log your first entry above.</div>';
+                return;
+            }
+
+            // Flip the array so your newest logs appear at the top of the feed
+            const feed = [...history].reverse();
+
+            feed.forEach(log => {
+                const title = log.title || "Daily Tactical Log";
+                const ref = log.reflection || "No reflection logged.";
+                
+                const [y, m, d] = log.date.split('-');
+                const dateObj = new Date(y, m - 1, d);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                vault.innerHTML += `
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); padding: 16px; border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: var(--accent-purple); font-size: 15px;">${title}</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono);">${dateStr}</div>
+                    </div>
+                    <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;">${ref}</div>
+                </div>`;
+            });
+        } catch(e) { console.error("Vault offline"); }
+    }
+    
     // --- COGNITIVE VAULT ENGINE ---
     async function loadVault() {
         try {
