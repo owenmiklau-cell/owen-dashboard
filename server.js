@@ -19,7 +19,6 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Connected to MongoDB Cloud Database'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
-// 1. Health Schema
 const daySchema = new mongoose.Schema({
     date: { type: String, required: true, unique: true },
     healthScore: Number,
@@ -33,14 +32,12 @@ const daySchema = new mongoose.Schema({
 }, { timestamps: true });
 const DayLog = mongoose.model('DayLog', daySchema);
 
-// 2. Auth Token Schema
 const tokenSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     refreshToken: String
 });
 const AuthToken = mongoose.model('AuthToken', tokenSchema);
 
-// 3. Portfolio Schema
 const portfolioSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     holdings: Array,
@@ -48,7 +45,6 @@ const portfolioSchema = new mongoose.Schema({
 });
 const Portfolio = mongoose.model('Portfolio', portfolioSchema);
 
-// 4. Mindset & Journal Schema
 const journalSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user' },
     date: { type: String, required: true },
@@ -57,7 +53,6 @@ const journalSchema = new mongoose.Schema({
 });
 const JournalLog = mongoose.model('JournalLog', journalSchema);
 
-// 5. User Settings (Dynamic Habits)
 const settingsSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     habitList: { type: Array, default: ['Hydration (1 Gallon)', '10 Mins Match Visualization', 'Mobility / Deep Stretching', 'Read 15 Pages'] }
@@ -409,16 +404,13 @@ app.post('/api/journal', async (req, res) => {
 
 app.get('/api/journal/history', async (req, res) => {
     try {
-        const days = parseInt(req.query.days) || 30; // Defaults to 30 if blank
+        const days = parseInt(req.query.days) || 30; 
         
-        // Grab the most recent entries (sorted newest to oldest)
         let history = await JournalLog.find({ identifier: 'primary_user' })
             .sort({ date: -1 })
             .limit(days === 0 ? 0 : days); 
             
-        // Reverse it back to chronological order for the chart
         history = history.reverse(); 
-        
         res.json(history);
     } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
 });
@@ -432,7 +424,6 @@ app.get('/api/stocks', async (req, res) => {
         const symbols = symbolsStr.split(',');
         const data = {};
         
-        // Use Yahoo's open v8 chart endpoint to completely bypass server blocking
         const requests = symbols.map(sym => 
             axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, {
                 headers: { 'User-Agent': 'Mozilla/5.0' }

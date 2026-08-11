@@ -156,7 +156,7 @@
     .chat-input-area button { background: var(--accent-purple); color: white; border: none; padding: 0 24px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
     .chat-input-area button:hover { opacity: 0.8; }
     
-    /* --- 📱 MOBILE RESPONSIVENESS (The Field Upgrade) --- */
+    /* --- 📱 MOBILE RESPONSIVENESS --- */
     @media (max-width: 768px) {
       body { padding: 20px 12px 100px; }
       .top-header { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -205,19 +205,23 @@
       </div>
 
       <div class="gm-card">
-         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-             <div class="section-title" style="margin: 0;">Habit Consistency</div>
-             <select id="chart-timeframe" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
-                 <option value="7">7 Days</option>
-                 <option value="30" selected>30 Days</option>
-                 <option value="90">90 Days</option>
-                 <option value="0">All Time</option>
-             </select>
-         </div>
-         <div class="chart-container">
-           <canvas id="habitChart"></canvas>
-         </div>
-      </div>
+        <div class="day-ring-wrap">
+          <div class="ring-container">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+              <circle class="ring-fill" id="dayRingFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+            </svg>
+            <div class="ring-center-content">
+              <div class="ring-percent" id="dayRingPercent">—</div>
+              <div class="ring-phase" id="dayRingPhase">LOADING</div>
+            </div>
+          </div>
+          <div class="ring-details">
+            <div class="ring-status-line" id="dayRingStatus">Syncing timeline...</div>
+            <div class="ring-remaining" id="dayRingRemaining">--h --m</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px;" id="dayRingClock">--:--</div>
+          </div>
+        </div>
       </div>
           
       <div class="section-title">Execution</div>
@@ -348,6 +352,7 @@
       </div>
     </div>
   </div> 
+
 <div id="Portfolio" class="tab-content">
     <div class="container">
       
@@ -388,24 +393,6 @@
     </div>
   </div>
 
-  <div id="ai-bottom-bar" class="bottom-bar collapsed">
-    <div class="chat-header" id="chat-header-toggle">
-      <div class="chat-header-inner">
-        <span class="chat-title">✨ Gemini Assistant</span>
-        <span class="chat-toggle-icon">▲ Expand</span>
-      </div>
-    </div>
-    <div class="chat-content">
-      <div id="chat-history" class="chat-history">
-          <div class="chat-msg ai">How can I help you optimize your day?</div>
-      </div>
-      <div class="chat-input-area">
-          <input type="text" id="chat-input" placeholder="Ask about your stats or plan...">
-          <button id="btn-send-chat">Send</button>
-      </div>
-    </div>
-  </div>
-
 <div id="Mindset" class="tab-content">
     <div class="container">
       
@@ -431,7 +418,15 @@
       </div>
 
       <div class="gm-card">
-         <div class="section-title">30-Day Consistency</div>
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+             <div class="section-title" style="margin: 0;">Habit Consistency</div>
+             <select id="chart-timeframe" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                 <option value="7">7 Days</option>
+                 <option value="30" selected>30 Days</option>
+                 <option value="90">90 Days</option>
+                 <option value="0">All Time</option>
+             </select>
+         </div>
          <div class="chart-container">
            <canvas id="habitChart"></canvas>
          </div>
@@ -456,6 +451,24 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <div id="ai-bottom-bar" class="bottom-bar collapsed">
+    <div class="chat-header" id="chat-header-toggle">
+      <div class="chat-header-inner">
+        <span class="chat-title">✨ Gemini Assistant</span>
+        <span class="chat-toggle-icon">▲ Expand</span>
+      </div>
+    </div>
+    <div class="chat-content">
+      <div id="chat-history" class="chat-history">
+          <div class="chat-msg ai">How can I help you optimize your day?</div>
+      </div>
+      <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Ask about your stats or plan...">
+          <button id="btn-send-chat">Send</button>
+      </div>
     </div>
   </div>
 
@@ -509,21 +522,15 @@
     function initWeather() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-             // 1. Try exact browser GPS first
-             fetchWeather(position.coords.latitude, position.coords.longitude);
-          }, 
+          (position) => { fetchWeather(position.coords.latitude, position.coords.longitude); }, 
           async () => {
-             // 2. FALLBACK: If GPS is blocked or denied, find location automatically via IP address
              try {
                const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
                const geoData = await geoRes.json();
                fetchWeather(geoData.latitude, geoData.longitude);
-             } catch(e) {
-               document.getElementById('weatherWidget').innerHTML = `<span>📍 Location Denied</span>`;
-             }
+             } catch(e) { document.getElementById('weatherWidget').innerHTML = `<span>📍 Location Denied</span>`; }
           },
-          { timeout: 4000 } // Force fallback if browser GPS hangs for more than 4 seconds
+          { timeout: 4000 }
         );
       }
     }
@@ -537,17 +544,14 @@
     }
 
     async function saveSubjective() {
-      // 1. Get values
       const state = {
         sore: document.getElementById('slide-sore').value,
         energy: document.getElementById('slide-energy').value,
         motivate: document.getElementById('slide-motivate').value
       };
       
-      // 2. Save locally
       localStorage.setItem('subjectiveState', JSON.stringify(state));
 
-      // 3. Save to permanent Database Vault
       await fetch('/api/save-day', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -559,11 +563,9 @@
         })
       });
       
-      // 4. Visual Button Animation
       const btn = document.getElementById('saveSubjectiveBtn');
       btn.innerText = "✓ Logged!";
       btn.style.background = "var(--accent-green)";
-      
       setTimeout(() => {
         btn.innerText = "Submit Log";
         btn.style.background = "var(--accent-purple)";
@@ -588,6 +590,7 @@
 
     let todayKey = `goals:${getActiveDateString()}`;
     let tomorrowKey = `goals:${getTomorrowDateString()}`;
+    let appActiveDate = getActiveDateString();
 
     // --- Task Rollover ---
     function performRollover() {
@@ -637,6 +640,11 @@
 
     // --- Day Ring Logic ---
     function updateDayBar() {
+      // 🕛 MIDNIGHT ROLLOVER: Wipe checkboxes natively if a new day has started
+      if (appActiveDate !== getActiveDateString()) {
+          window.location.reload(true);
+      }
+        
       const now = new Date();
       const decHours = now.getHours() + now.getMinutes() / 60;
       document.getElementById('dayRingClock').innerText = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -686,7 +694,7 @@
           const goals = storeGet(key);
           goals[i].done = !goals[i].done;
           storeSet(key, goals);
-          if (goals[i].done) playCheckSound(); // Play sound on check!
+          if (goals[i].done) playCheckSound(); 
           loadToday();
         };
         li.querySelector('.goal-delete').onclick = () => {
@@ -741,14 +749,12 @@
         const res = await fetch('/api/history');
         const history = await res.json();
         
-        // If we don't have enough history yet, pad it with empty labels
-        const labels = history.map(day => day.date.slice(5)); // Gets "MM-DD"
+        const labels = history.map(day => day.date.slice(5)); 
         const scoreData = history.map(day => parseInt(day.healthScore) || 0);
         const recData = history.map(day => parseInt(day.recovery) || 0);
 
         const ctx = document.getElementById('trendChart').getContext('2d');
         
-        // Destroy old chart if it exists so we don't overlap them
         if (window.myTrendChart) window.myTrendChart.destroy();
 
         window.myTrendChart = new Chart(ctx, {
@@ -777,8 +783,6 @@
       try {
         const response = await fetch('/api/health-data');
         
-        // THE FIX: If the response fails for ANY reason (401, 500, etc)
-        // Show the Sync button and stop trying to render the page.
         if (!response.ok) {
           document.getElementById('health-auth-view').style.display = 'flex';
           document.getElementById('health-data-view').style.display = 'none';
@@ -801,7 +805,6 @@
           document.getElementById('tab-hrv').innerText = data.hrv || '--';
           document.getElementById('tab-spo2').innerText = data.spo2 || '--';
 
-          // 💾 1. Save today's live data to our new permanent database
           await fetch('/api/save-day', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -815,10 +818,7 @@
             })
           });
 
-          // 📈 2. Draw the chart using the real history we just updated
           renderChart();
-          
-          // 🧠 3. Generate the AI Briefing
           generateMorningBriefing(); 
         }
       } catch (error) { console.error("Health Tab Failed:", error); }
@@ -858,13 +858,11 @@
       const lastBriefing = localStorage.getItem('lastBriefingDate');
       const cachedHTML = localStorage.getItem('dailyDirectiveHTML');
       
-      // Only use the cached briefing if it exists AND is not an old error message
       if (lastBriefing === todayDate && cachedHTML && !cachedHTML.includes("offline") && !cachedHTML.includes("failed")) {
         document.getElementById('dailyDirectiveText').innerHTML = cachedHTML;
         return;
       }
 
-      // Generate a brand new briefing
       document.getElementById('dailyDirectiveText').innerHTML = "Syncing biometric data to generate today's tactical protocol...";
       
       const context = getOmniscientData();
@@ -873,20 +871,19 @@
       const reply = await callGemini('general_chat', systemPromptOverride, context);
       document.getElementById('dailyDirectiveText').innerHTML = reply;
       
-      // ONLY save to cache if the AI actually succeeded
       if (!reply.includes("offline") && !reply.includes("failed") && !reply.includes("Error")) {
           localStorage.setItem('lastBriefingDate', todayDate);
           localStorage.setItem('dailyDirectiveHTML', reply);
       }
     }
 
-    // Polish Buttons
     document.getElementById('goalPolishBtn').addEventListener('click', async () => {
       const inputElement = document.getElementById('goalInput'); 
       if (!inputElement.value.trim()) return;
       const original = inputElement.value; inputElement.value = "✨ Polishing..."; 
       inputElement.value = (await callGemini('polish_text', original)).replace(/\*\*/g, '');
     });
+    
     document.getElementById('tomorrowPolishBtn').addEventListener('click', async () => {
       const planElement = document.getElementById('tomorrowInput'); 
       if (!planElement.value.trim()) return;
@@ -894,7 +891,6 @@
       planElement.value = (await callGemini('polish_plan', original)).replace(/\*\*/g, '');
     });
 
-    // Chat Widget Logic
     const bottomBar = document.getElementById('ai-bottom-bar');
     const headerToggle = document.getElementById('chat-header-toggle');
     const toggleIcon = document.querySelector('.chat-toggle-icon');
@@ -939,15 +935,10 @@
       chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
-    document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
-    document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
-    
-    // --- 📈 PORTFOLIO ENGINE (DATABASE & LIVE MARKET) ---
+    // --- 📈 PORTFOLIO ENGINE ---
     let globalPortfolio = [];
     let portfolioTotal = 0;
 
-    // 1. Function to draw the UI (Used on load AND on CSV upload)
     async function renderPortfolioUI(holdings, totalValue) {
         document.getElementById('portfolio-total').innerText = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
@@ -970,43 +961,39 @@
                     <div style="font-weight: 800; font-size: 16px;">${stock.symbol}</div>
                     <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">${stock.shares} Shares</div>
                 </div>
-                <<div style="text-align: right;">
+                <div style="text-align: right;">
                     <div id="position-value-${idx}" style="font-family: var(--font-mono); color: var(--text-primary); font-size: 16px;">${stock.valueStr}</div>
-                    
                     <div id="live-price-${idx}" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Fetching live price...</div>
                 </div>
               </div>
             </li>`;
         });
         
-        // 2. Ping Yahoo Finance for live data & Calculate Daily P&L
         if(symbolsToFetch.length > 0) {
             try {
                 const res = await fetch(`/api/stocks?symbols=${symbolsToFetch.join(',')}`);
                 const liveData = await res.json();
                 
                 let dayChangeTotal = 0; 
-                let livePortfolioTotal = 0; // NEW: Track the true live grand total
+                let livePortfolioTotal = 0;
                 
                 holdings.forEach((stock, idx) => {
                    const displayEl = document.getElementById(`live-price-${idx}`);
-                   const valueEl = document.getElementById(`position-value-${idx}`); // NEW: Target the main dollar amount
+                   const valueEl = document.getElementById(`position-value-${idx}`); 
                    
                    if (stock.symbol === 'CASH (SPAXX)') {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Pegged to $1.00</span>`;
-                       livePortfolioTotal += stock.valueNum; // Add cash to the live total
+                       livePortfolioTotal += stock.valueNum;
                        
                    } else if(liveData && liveData[stock.symbol]) {
                        const price = liveData[stock.symbol].price;
                        const change = liveData[stock.symbol].changePercent.toFixed(2);
                        const changeAmt = liveData[stock.symbol].changeAmount;
                        
-                       // 🧮 LIVE MATH: Shares * Live Price
                        const livePosValue = stock.shares * price;
                        livePortfolioTotal += livePosValue; 
                        dayChangeTotal += (changeAmt * stock.shares);
 
-                       // Overwrite the old CSV value with the new live dollar value
                        valueEl.innerText = '$' + livePosValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
                        const color = change >= 0 ? 'var(--accent-green)' : 'var(--danger)';
@@ -1014,35 +1001,30 @@
                        displayEl.innerHTML = `Live: $${price.toFixed(2)} <span style="color: ${color}; font-weight: 600;">(${sign}${change}%)</span>`;
                    } else {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Market Closed / Data Offline</span>`;
-                       livePortfolioTotal += stock.valueNum; // Fallback to saved CSV value if offline
+                       livePortfolioTotal += stock.valueNum;
                    }
                 });
                 
-                // Overwrite the main Grand Total at the top of the page with the real-time sum
                 document.getElementById('portfolio-total').innerText = '$' + livePortfolioTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                 
-                // Render the Total Day Change
                 const dayChangeEl = document.getElementById('portfolio-day-change');
                 if (dayChangeTotal !== 0) {
                     const isPositive = dayChangeTotal >= 0;
                     const color = isPositive ? 'var(--accent-green)' : 'var(--danger)';
                     const sign = isPositive ? '+' : '';
                     
-                    // Percentage based on the live total minus today's swing
                     const prevTotal = livePortfolioTotal - dayChangeTotal;
                     const totalPercent = prevTotal > 0 ? ((dayChangeTotal / prevTotal) * 100).toFixed(2) : '0.00';
-                    
                     const formattedDollar = Math.abs(dayChangeTotal).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    
                     dayChangeEl.innerHTML = `<span style="color: ${color};">${sign}$${formattedDollar} (${sign}${totalPercent}%) Today</span>`;
                 } else {
                     dayChangeEl.innerHTML = `<span style="color: var(--text-tertiary)">$0.00 (0.00%) Today</span>`;
                 }
-                
             } catch(e) { console.error("Live Price Fetch Failed"); }
         }
     }
 
-    // 3. Load saved portfolio from MongoDB on startup
     async function loadSavedPortfolio() {
         try {
             const res = await fetch('/api/portfolio');
@@ -1055,7 +1037,6 @@
         } catch(e) { console.error("Failed to load saved portfolio"); }
     }
 
-    // 4. Handle new CSV Uploads
     document.getElementById('csvFileInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1085,18 +1066,15 @@
             sym = sym.replace(/\*/g, '');
             if (sym.includes('SPAXX')) sym = 'CASH (SPAXX)';
             
-            // 🔎 BULLETPROOF DATA FINDER: Hunts for the column no matter what Fidelity named it
             let valKey = Object.keys(obj).find(k => k.toLowerCase().includes('value'));
             let valStr = valKey ? obj[valKey] : '0';
             
             let qtyKey = Object.keys(obj).find(k => k.toLowerCase().includes('quantity'));
             let qtyStr = qtyKey ? obj[qtyKey] : '0';
             
-            // 🧮 MATH CLEANER: Strips $ and commas
             let valNum = parseFloat(valStr.replace(/[$\s,]/g, '')) || 0;
             let qtyNum = parseFloat(qtyStr.replace(/[$\s,]/g, '')) || 0;
             
-            // 💵 SPAXX SAFETY NET: If Fidelity blanks out the value but gives shares, 1 share = $1
             if (sym === 'CASH (SPAXX)' && valNum === 0 && qtyNum > 0) {
                 valNum = qtyNum;
             }
@@ -1115,7 +1093,6 @@
         portfolioTotal = newTotal;
         renderPortfolioUI(globalPortfolio, portfolioTotal);
         
-        // 💾 Save the new portfolio to MongoDB permanently
         await fetch('/api/portfolio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1125,7 +1102,6 @@
       reader.readAsText(file);
     });
 
-    // --- 🤖 QUANT ANALYST CHAT ENGINE ---
     async function sendPortfolioChat() {
       const input = document.getElementById('portfolio-chat-input');
       const text = input.value.trim();
@@ -1153,7 +1129,6 @@
               body: JSON.stringify({
                   task: 'portfolio_chat',
                   content: text,
-                  // We now pass the PURE NUMBERS to the AI so it doesn't get confused by text strings
                   contextData: { portfolio: globalPortfolio, totalValue: portfolioTotal }
               })
           });
@@ -1168,11 +1143,10 @@
       historyBox.scrollTop = historyBox.scrollHeight;
     }
 
-// --- 🧠 MINDSET & JOURNAL ENGINE (DYNAMIC) ---
+    // --- 🧠 MINDSET & JOURNAL ENGINE ---
     let masterHabitList = [];
     let isEditingHabits = false;
 
-    // 1. Fetch Master List and Render Checkboxes
     async function renderHabitUI() {
         const container = document.getElementById('habit-container');
         container.innerHTML = '';
@@ -1194,21 +1168,17 @@
             </div>`;
         });
 
-        // Re-attach save listeners to the new checkboxes
         document.querySelectorAll('.habit-check').forEach(box => {
             box.addEventListener('change', saveJournal);
         });
     }
 
-    // 2. Load Today's Journal & The 30-Day Chart
     async function loadJournal() {
         try {
-            // Get Master Habit List
             const masterRes = await fetch('/api/habits/master');
             masterHabitList = await masterRes.json();
             renderHabitUI();
 
-            // Get Today's Data
             const today = getActiveDateString();
             const res = await fetch(`/api/journal?date=${today}`);
             const data = await res.json();
@@ -1221,13 +1191,10 @@
                 box.checked = completedHabits[habitName] === true;
             });
             
-            // Draw the 30-Day Consistency Chart
             renderHabitChart();
-
         } catch(e) { console.error("Failed to load journal ecosystem"); }
     }
 
-    // 3. Save the Journal Data
     async function saveJournal() {
         const btn = document.getElementById('btn-save-journal');
         const originalText = btn.innerText;
@@ -1250,7 +1217,7 @@
             });
             btn.style.background = "var(--accent-green)";
             btn.innerText = "✓ Saved!";
-            renderHabitChart(); // Update chart instantly on save
+            renderHabitChart(); 
         } catch (err) { btn.innerText = "Error"; }
         
         setTimeout(() => {
@@ -1259,13 +1226,11 @@
         }, 2000);
     }
 
-    // 4. Edit Habit Logic
     document.getElementById('btn-edit-habits').addEventListener('click', () => {
         isEditingHabits = !isEditingHabits;
         document.getElementById('habit-edit-ui').style.display = isEditingHabits ? 'block' : 'none';
         document.getElementById('btn-edit-habits').innerText = isEditingHabits ? 'Done' : '⚙ Edit';
         renderHabitUI();
-        // Re-check boxes after re-render
         loadJournal(); 
     });
 
@@ -1283,7 +1248,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ habitList: masterHabitList })
         });
-        loadJournal(); // Reload checks
+        loadJournal(); 
     });
 
     async function deleteHabit(index) {
@@ -1296,17 +1261,14 @@
         });
         loadJournal();
     }
-    // 5. Draw the Dynamic Habit Chart
+
     async function renderHabitChart() {
         try {
-            // Check what timeframe the dropdown is currently set to
             const timeframe = document.getElementById('chart-timeframe').value;
-            
-            // Ping the backend with the requested number of days
             const res = await fetch(`/api/journal/history?days=${timeframe}`);
             const history = await res.json();
             
-            const labels = history.map(day => day.date.slice(5)); // 'MM-DD'
+            const labels = history.map(day => day.date.slice(5)); 
             const dataPoints = history.map(day => {
                 let count = 0;
                 for (let key in day.habits) { if (day.habits[key] === true) count++; }
@@ -1339,10 +1301,7 @@
                         },
                         x: { 
                             grid: { display: false }, 
-                            ticks: { 
-                                color: '#71717A',
-                                maxTicksLimit: 14 // CRITICAL: Prevents 'All Time' from crushing the text together
-                            } 
+                            ticks: { color: '#71717A', maxTicksLimit: 14 } 
                         }
                     }
                 }
@@ -1350,33 +1309,16 @@
         } catch (err) { console.error("Chart Failed", err); }
     }
 
-    // NEW: Listen for the dropdown changing and instantly redraw the chart
-    document.getElementById('chart-timeframe').addEventListener('change', renderHabitChart);
-    document.getElementById('btn-analyze-mindset').addEventListener('click', async () => {
-        const text = document.getElementById('journal-input').value.trim();
-        if (!text) return alert("Write something in your journal first!");
-        
-        await saveJournal();
-        document.getElementById('mindset-ai-card').style.display = 'block';
-        document.getElementById('mindset-ai-response').innerText = "Analyzing mental state and habit completion...";
-        
-        const habits = {};
-        document.querySelectorAll('.habit-check').forEach(box => { habits[box.getAttribute('data-name')] = box.checked; });
-        
-        try {
-            const res = await fetch('/api/gemini', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task: 'mindset_chat', content: text, contextData: { habits } })
-            });
-            const data = await res.json();
-            document.getElementById('mindset-ai-response').innerText = (data.reply || data.error).replace(/\*\*/g, '');
-        } catch(err) { document.getElementById('mindset-ai-response').innerText = "Coach offline."; }
-    });
-    // ---init---
-    document.getElementById('btn-portfolio-chat').addEventListener('click', sendPortfolioChat);
-    document.getElementById('portfolio-chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') sendPortfolioChat(); });// --- Init ---
+    // --- Init Application ---
     window.addEventListener('DOMContentLoaded', () => {
+      
+      // AUTO-REDIRECT TO HEALTH TAB AFTER GOOGLE LOGIN
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('tab') === 'health') {
+          openTab(null, 'Health');
+          window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       initWeather();
       loadSubjective();
       performRollover();
@@ -1390,7 +1332,37 @@
       loadSavedPortfolio();
       loadJournal();
       
-      // --- 📱 PULL-TO-REFRESH (PWA WEB APP) ---
+      // Event Listeners
+      document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
+      document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+      document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
+      document.getElementById('btn-portfolio-chat').addEventListener('click', sendPortfolioChat);
+      document.getElementById('portfolio-chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') sendPortfolioChat(); });
+      document.getElementById('chart-timeframe').addEventListener('change', renderHabitChart);
+      
+      document.getElementById('btn-analyze-mindset').addEventListener('click', async () => {
+          const text = document.getElementById('journal-input').value.trim();
+          if (!text) return alert("Write something in your journal first!");
+          
+          await saveJournal();
+          document.getElementById('mindset-ai-card').style.display = 'block';
+          document.getElementById('mindset-ai-response').innerText = "Analyzing mental state and habit completion...";
+          
+          const habits = {};
+          document.querySelectorAll('.habit-check').forEach(box => { habits[box.getAttribute('data-name')] = box.checked; });
+          
+          try {
+              const res = await fetch('/api/gemini', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ task: 'mindset_chat', content: text, contextData: { habits } })
+              });
+              const data = await res.json();
+              document.getElementById('mindset-ai-response').innerText = (data.reply || data.error).replace(/\*\*/g, '');
+          } catch(err) { document.getElementById('mindset-ai-response').innerText = "Coach offline."; }
+      });
+      
+      // PULL-TO-REFRESH
       let touchStartY = 0;
       const ptrEl = document.createElement('div');
       ptrEl.innerHTML = "↓ Pull to refresh";
@@ -1402,7 +1374,6 @@
       document.body.prepend(ptrEl);
   
       document.addEventListener('touchstart', e => {
-          // Only trigger if we are at the absolute top of the page
           if (window.scrollY === 0) touchStartY = e.touches[0].clientY;
       }, { passive: true });
   
@@ -1410,7 +1381,7 @@
           if (window.scrollY === 0 && touchStartY > 0) {
               const pullDist = e.touches[0].clientY - touchStartY;
               if (pullDist > 0) {
-                  ptrEl.style.transition = 'none'; // Lock to finger
+                  ptrEl.style.transition = 'none'; 
                   ptrEl.style.top = Math.min(pullDist - 50, 20) + 'px';
                   ptrEl.innerHTML = pullDist > 80 ? "↻ Release to sync" : "↓ Pull to refresh";
               }
@@ -1420,11 +1391,10 @@
       document.addEventListener('touchend', e => {
           if (touchStartY > 0) {
               const pullDist = e.changedTouches[0].clientY - touchStartY;
-              ptrEl.style.transition = 'top 0.3s'; // Snap back animation
+              ptrEl.style.transition = 'top 0.3s'; 
               if (pullDist > 80 && window.scrollY === 0) {
                   ptrEl.innerHTML = "⚡ Syncing...";
                   ptrEl.style.top = '20px';
-                  // Force the browser to grab fresh data from the Render server
                   setTimeout(() => window.location.reload(), 400); 
               } else {
                   ptrEl.style.top = '-50px';
@@ -1433,7 +1403,7 @@
           }
       });      
 
-      // --- 🧠 AI Coach Button Logic ---
+      // AI COACH
       document.getElementById('btn-ask-coach').addEventListener('click', async () => {
         const btn = document.getElementById('btn-ask-coach');
         const originalText = btn.innerText;
@@ -1459,7 +1429,6 @@
         } catch (err) {
           document.getElementById('ai-response').innerText = "Coach offline. Check connection.";
         }
-        
         btn.innerText = originalText;
       });
     });
