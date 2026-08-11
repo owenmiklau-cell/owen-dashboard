@@ -39,7 +39,13 @@ const tokenSchema = new mongoose.Schema({
     refreshToken: String
 });
 const AuthToken = mongoose.model('AuthToken', tokenSchema);
-
+// --- 📈 PORTFOLIO SCHEMA ---
+const portfolioSchema = new mongoose.Schema({
+    identifier: { type: String, default: 'primary_user', unique: true },
+    holdings: Array,
+    totalValue: Number
+});
+const Portfolio = mongoose.model('Portfolio', portfolioSchema);
 // --- 🔐 PERSISTENT TOKEN MANAGEMENT ---
 let storedAccessToken = null;
 let tokenExpiresAt = null;
@@ -283,6 +289,28 @@ app.get('/api/health-data', async (req, res) => {
 });
 
 // --- 🗄️ DATABASE ROUTES (MONGODB) ---
+app.get('/api/portfolio', async (req, res) => {
+    try {
+        const doc = await Portfolio.findOne({ identifier: 'primary_user' });
+        res.json(doc ? { holdings: doc.holdings, totalValue: doc.totalValue } : { holdings: [], totalValue: 0 });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch portfolio" });
+    }
+});
+
+app.post('/api/portfolio', async (req, res) => {
+    try {
+        const { holdings, totalValue } = req.body;
+        await Portfolio.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { holdings, totalValue },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save portfolio" });
+    }
+});
 app.post('/api/save-day', async (req, res) => {
     try {
         let payload = req.body;

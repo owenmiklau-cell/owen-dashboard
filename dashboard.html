@@ -890,101 +890,54 @@
     document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
     document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
     
-    // --- 📈 PORTFOLIO CSV PARSER & LIVE MARKET ENGINE ---
+    // --- 📈 PORTFOLIO ENGINE (DATABASE & LIVE MARKET) ---
     let globalPortfolio = [];
     let portfolioTotal = 0;
 
-    document.getElementById('csvFileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = async function(event) {
-        const text = event.target.result;
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
+    // 1. Function to draw the UI (Used on load AND on CSV upload)
+    async function renderPortfolioUI(holdings, totalValue) {
+        document.getElementById('portfolio-total').innerText = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // Find header row safely
-        const headerIdx = lines.findIndex(l => l.includes('Symbol'));
-        if (headerIdx === -1) return alert("Could not find 'Symbol' column. Ensure this is a Fidelity CSV.");
-        
-        const headers = lines[headerIdx].split(',').map(h => h.replace(/"/g, '').trim());
-        globalPortfolio = [];
-        portfolioTotal = 0;
-        
-        for (let i = headerIdx + 1; i < lines.length; i++) {
-          // Parse CSV ignoring commas inside quotes
-          const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-          let obj = {};
-          for (let j = 0; j < headers.length; j++) {
-            if (row[j]) obj[headers[j]] = row[j].replace(/"/g, '').trim();
-          }
-          
-          let sym = obj['Symbol'];
-          if (sym && !sym.includes('Account') && sym !== 'Pending Activity') {
-            
-            // FIX: Explicitly handle SPAXX and strip Fidelity's weird asterisks
-            sym = sym.replace(/\*/g, '');
-            if (sym.includes('SPAXX')) {
-                sym = 'CASH (SPAXX)';
-                obj['Symbol'] = sym;
-            } else {
-                obj['Symbol'] = sym;
-            }
-            
-            // Math Fix: Strip '$' and ',' to do actual calculations
-            const valStr = obj['Current Value'] || '0';
-            const valNum = parseFloat(valStr.replace(/[$,]/g, '')) || 0;
-            portfolioTotal += valNum;
-            
-            globalPortfolio.push(obj);
-          }
-        }
-        
-        // Update Total UI
-        document.getElementById('portfolio-total').innerText = '$' + portfolioTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        
-        // Render List UI
         const list = document.getElementById('portfolioList');
         list.innerHTML = '';
         let symbolsToFetch = [];
         
-        globalPortfolio.forEach((stock, idx) => {
-          const sym = stock['Symbol'];
-          const qty = stock['Quantity'] || '0';
-          const val = stock['Current Value'] || '$0.00';
-          
-          if (sym !== 'CASH (SPAXX)') symbolsToFetch.push(sym);
+        if (holdings.length === 0) {
+            list.innerHTML = '<li style="color: var(--text-tertiary); font-size: 14px;">No portfolio data found. Upload CSV.</li>';
+            return;
+        }
+        
+        holdings.forEach((stock, idx) => {
+          if (stock.symbol !== 'CASH (SPAXX)') symbolsToFetch.push(stock.symbol);
           
           list.innerHTML += `
             <li class="goal-row" style="padding: 16px;">
               <div style="display: flex; justify-content: space-between; width: 100%;">
                 <div>
-                    <div style="font-weight: 800; font-size: 16px;">${sym}</div>
-                    <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">${qty} Shares</div>
+                    <div style="font-weight: 800; font-size: 16px;">${stock.symbol}</div>
+                    <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">${stock.shares} Shares</div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-family: var(--font-mono); color: var(--text-primary); font-size: 16px;">${val}</div>
+                    <div style="font-family: var(--font-mono); color: var(--text-primary); font-size: 16px;">${stock.valueStr}</div>
                     <div id="live-price-${idx}" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Fetching live price...</div>
                 </div>
               </div>
             </li>`;
         });
         
-        // Ping Yahoo Finance for live data
+        // 2. Ping Yahoo Finance for live data
         if(symbolsToFetch.length > 0) {
             try {
                 const res = await fetch(`/api/stocks?symbols=${symbolsToFetch.join(',')}`);
                 const liveData = await res.json();
                 
-                globalPortfolio.forEach((stock, idx) => {
-                   const cleanSym = stock['Symbol'];
+                holdings.forEach((stock, idx) => {
                    const displayEl = document.getElementById(`live-price-${idx}`);
-                   
-                   if (cleanSym === 'CASH (SPAXX)') {
+                   if (stock.symbol === 'CASH (SPAXX)') {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Pegged to $1.00</span>`;
-                   } else if(liveData[cleanSym]) {
-                       const price = liveData[cleanSym].price.toFixed(2);
-                       const change = liveData[cleanSym].changePercent.toFixed(2);
+                   } else if(liveData[stock.symbol]) {
+                       const price = liveData[stock.symbol].price.toFixed(2);
+                       const change = liveData[stock.symbol].changePercent.toFixed(2);
                        const color = change >= 0 ? 'var(--accent-green)' : 'var(--danger)';
                        const sign = change > 0 ? '+' : '';
                        displayEl.innerHTML = `Live: $${price} <span style="color: ${color}; font-weight: 600;">(${sign}${change}%)</span>`;
@@ -994,6 +947,77 @@
                 });
             } catch(e) { console.error("Live Price Fetch Failed"); }
         }
+    }
+
+    // 3. Load saved portfolio from MongoDB on startup
+    async function loadSavedPortfolio() {
+        try {
+            const res = await fetch('/api/portfolio');
+            const data = await res.json();
+            if (data && data.holdings && data.holdings.length > 0) {
+                globalPortfolio = data.holdings;
+                portfolioTotal = data.totalValue;
+                renderPortfolioUI(globalPortfolio, portfolioTotal);
+            }
+        } catch(e) { console.error("Failed to load saved portfolio"); }
+    }
+
+    // 4. Handle new CSV Uploads
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        const text = event.target.result;
+        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        
+        const headerIdx = lines.findIndex(l => l.includes('Symbol'));
+        if (headerIdx === -1) return alert("Could not find 'Symbol' column.");
+        
+        const headers = lines[headerIdx].split(',').map(h => h.replace(/"/g, '').trim());
+        let newHoldings = [];
+        let newTotal = 0;
+        
+        for (let i = headerIdx + 1; i < lines.length; i++) {
+          const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+          let obj = {};
+          for (let j = 0; j < headers.length; j++) {
+            if (row[j]) obj[headers[j]] = row[j].replace(/"/g, '').trim();
+          }
+          
+          let sym = obj['Symbol'];
+          if (sym && !sym.includes('Account') && sym !== 'Pending Activity') {
+            
+            sym = sym.replace(/\*/g, '');
+            if (sym.includes('SPAXX')) sym = 'CASH (SPAXX)';
+            
+            // MATH CLEANER: Strip all symbols so AI gets pure numbers
+            const valStr = obj['Current Value'] || '0';
+            const valNum = parseFloat(valStr.replace(/[$,]/g, '')) || 0;
+            const qtyStr = obj['Quantity'] || '0';
+            const qtyNum = parseFloat(qtyStr.replace(/[$,]/g, '')) || 0;
+            
+            newTotal += valNum;
+            newHoldings.push({
+                symbol: sym,
+                shares: qtyNum,       // Pure number for AI
+                valueNum: valNum,     // Pure number for AI
+                valueStr: valStr      // Formatted string for UI
+            });
+          }
+        }
+        
+        globalPortfolio = newHoldings;
+        portfolioTotal = newTotal;
+        renderPortfolioUI(globalPortfolio, portfolioTotal);
+        
+        // 💾 Save the new portfolio to MongoDB permanently
+        await fetch('/api/portfolio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ holdings: globalPortfolio, totalValue: portfolioTotal })
+        });
       };
       reader.readAsText(file);
     });
@@ -1011,12 +1035,10 @@
       
       const historyBox = document.getElementById('portfolio-chat-history');
       
-      // Print User Message
       historyBox.innerHTML += `<div class="chat-msg user" style="background: rgba(255,255,255,0.08); padding: 12px 16px; border-radius: 12px; align-self: flex-end; max-width: 85%;">${text}</div>`;
       input.value = '';
       historyBox.scrollTop = historyBox.scrollHeight;
       
-      // Print Loading Message
       const loadingId = 'port-load-' + Date.now();
       historyBox.innerHTML += `<div id="${loadingId}" class="chat-msg ai" style="background: rgba(0,0,0,0.4); padding: 12px 16px; border-radius: 12px; border-left: 2px solid var(--accent-green); align-self: flex-start; max-width: 85%; opacity: 0.7;">Scanning markets and analyzing portfolio...</div>`;
       historyBox.scrollTop = historyBox.scrollHeight;
@@ -1028,12 +1050,12 @@
               body: JSON.stringify({
                   task: 'portfolio_chat',
                   content: text,
+                  // We now pass the PURE NUMBERS to the AI so it doesn't get confused by text strings
                   contextData: { portfolio: globalPortfolio, totalValue: portfolioTotal }
               })
           });
           const data = await res.json();
           
-          // Print AI Response
           const loadingBubble = document.getElementById(loadingId);
           loadingBubble.innerHTML = (data.reply || data.error).replace(/\*\*/g, '');
           loadingBubble.style.opacity = '1';
@@ -1042,10 +1064,9 @@
       }
       historyBox.scrollTop = historyBox.scrollHeight;
     }
-    
+    // ---init---
     document.getElementById('btn-portfolio-chat').addEventListener('click', sendPortfolioChat);
-    document.getElementById('portfolio-chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') sendPortfolioChat(); });
-    // --- Init ---
+    document.getElementById('portfolio-chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') sendPortfolioChat(); });// --- Init ---
     window.addEventListener('DOMContentLoaded', () => {
       initWeather();
       loadSubjective();
@@ -1057,6 +1078,7 @@
       setInterval(updateDayBar, 60000);
       setInterval(updateTicker, 5000);
       initHealthTab();
+      loadSavedPortfolio();
       
       // --- 🧠 AI Coach Button Logic ---
       document.getElementById('btn-ask-coach').addEventListener('click', async () => {
