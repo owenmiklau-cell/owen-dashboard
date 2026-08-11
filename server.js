@@ -19,6 +19,7 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Connected to MongoDB Cloud Database'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
+// 1. Health Schema
 const daySchema = new mongoose.Schema({
     date: { type: String, required: true, unique: true },
     healthScore: Number,
@@ -30,36 +31,39 @@ const daySchema = new mongoose.Schema({
     energy: Number,
     motivation: Number
 }, { timestamps: true });
-
 const DayLog = mongoose.model('DayLog', daySchema);
 
-// --- 🔐 AUTH TOKEN SCHEMA ---
+// 2. Auth Token Schema
 const tokenSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     refreshToken: String
 });
 const AuthToken = mongoose.model('AuthToken', tokenSchema);
-// --- 📈 PORTFOLIO SCHEMA ---
+
+// 3. Portfolio Schema
 const portfolioSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     holdings: Array,
     totalValue: Number
 });
-// --- 🧠 MINDSET & JOURNAL SCHEMA ---
+const Portfolio = mongoose.model('Portfolio', portfolioSchema);
+
+// 4. Mindset & Journal Schema
 const journalSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user' },
     date: { type: String, required: true },
     habits: { type: Object, default: {} },
     reflection: { type: String, default: '' }
 });
-// --- ⚙️ USER SETTINGS SCHEMA (DYNAMIC HABITS) ---
+const JournalLog = mongoose.model('JournalLog', journalSchema);
+
+// 5. User Settings (Dynamic Habits)
 const settingsSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     habitList: { type: Array, default: ['Hydration (1 Gallon)', '10 Mins Match Visualization', 'Mobility / Deep Stretching', 'Read 15 Pages'] }
 });
 const Settings = mongoose.model('Settings', settingsSchema);
-const JournalLog = mongoose.model('JournalLog', journalSchema);
-const Portfolio = mongoose.model('Portfolio', portfolioSchema);
+
 // --- 🔐 PERSISTENT TOKEN MANAGEMENT ---
 let storedAccessToken = null;
 let tokenExpiresAt = null;
@@ -119,7 +123,6 @@ async function getValidAccessToken() {
             throw new Error("Token revoked or expired. Please re-authenticate.");
         }
     }
-
     throw new Error("No authentication credentials found. Please log in.");
 }
 
@@ -303,28 +306,6 @@ app.get('/api/health-data', async (req, res) => {
 });
 
 // --- 🗄️ DATABASE ROUTES (MONGODB) ---
-app.get('/api/portfolio', async (req, res) => {
-    try {
-        const doc = await Portfolio.findOne({ identifier: 'primary_user' });
-        res.json(doc ? { holdings: doc.holdings, totalValue: doc.totalValue } : { holdings: [], totalValue: 0 });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch portfolio" });
-    }
-});
-
-app.post('/api/portfolio', async (req, res) => {
-    try {
-        const { holdings, totalValue } = req.body;
-        await Portfolio.findOneAndUpdate(
-            { identifier: 'primary_user' },
-            { holdings, totalValue },
-            { upsert: true }
-        );
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to save portfolio" });
-    }
-});
 app.post('/api/save-day', async (req, res) => {
     try {
         let payload = req.body;
@@ -359,37 +340,31 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
-app.get('/api/journal/history', async (req, res) => {
+// --- 📈 PORTFOLIO ROUTES ---
+app.get('/api/portfolio', async (req, res) => {
     try {
-        const days = parseInt(req.query.days) || 30; // Defaults to 30 if blank
-        
-        // Grab the most recent entries (sorted newest to oldest)
-        let history = await JournalLog.find({ identifier: 'primary_user' })
-            .sort({ date: -1 })
-            .limit(days === 0 ? 0 : days); // Passing 0 to MongoDB tells it to fetch "All Time"
-            
-        // Reverse it back to chronological order for the chart (oldest left, newest right)
-        history = history.reverse(); 
-        
-        res.json(history);
-    } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
+        const doc = await Portfolio.findOne({ identifier: 'primary_user' });
+        res.json(doc ? { holdings: doc.holdings, totalValue: doc.totalValue } : { holdings: [], totalValue: 0 });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch portfolio" });
+    }
 });
 
-app.post('/api/journal', async (req, res) => {
+app.post('/api/portfolio', async (req, res) => {
     try {
-        const { date, habits, reflection } = req.body;
-        await JournalLog.findOneAndUpdate(
-            { identifier: 'primary_user', date: date },
-            { habits, reflection },
+        const { holdings, totalValue } = req.body;
+        await Portfolio.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { holdings, totalValue },
             { upsert: true }
         );
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: "Failed to save journal" });
+        res.status(500).json({ error: "Failed to save portfolio" });
     }
 });
 
-// --- ⚙️ DYNAMIC HABIT ROUTES ---
+// --- ⚙️ DYNAMIC HABIT & JOURNAL ROUTES ---
 app.get('/api/habits/master', async (req, res) => {
     try {
         const doc = await Settings.findOne({ identifier: 'primary_user' });
@@ -408,10 +383,42 @@ app.post('/api/habits/master', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
 });
 
+app.get('/api/journal', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const doc = await JournalLog.findOne({ identifier: 'primary_user', date: date });
+        res.json(doc || { habits: {}, reflection: '' });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch journal" });
+    }
+});
+
+app.post('/api/journal', async (req, res) => {
+    try {
+        const { date, habits, reflection } = req.body;
+        await JournalLog.findOneAndUpdate(
+            { identifier: 'primary_user', date: date },
+            { habits, reflection },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save journal" });
+    }
+});
+
 app.get('/api/journal/history', async (req, res) => {
     try {
-        // Grab the last 30 days of journal entries for the chart
-        const history = await JournalLog.find({ identifier: 'primary_user' }).sort({ date: 1 }).limit(30);
+        const days = parseInt(req.query.days) || 30; // Defaults to 30 if blank
+        
+        // Grab the most recent entries (sorted newest to oldest)
+        let history = await JournalLog.find({ identifier: 'primary_user' })
+            .sort({ date: -1 })
+            .limit(days === 0 ? 0 : days); 
+            
+        // Reverse it back to chronological order for the chart
+        history = history.reverse(); 
+        
         res.json(history);
     } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
 });
@@ -429,7 +436,7 @@ app.get('/api/stocks', async (req, res) => {
         const requests = symbols.map(sym => 
             axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, {
                 headers: { 'User-Agent': 'Mozilla/5.0' }
-            }).catch(() => null) // Silently ignore individual ticker errors
+            }).catch(() => null) 
         );
 
         const responses = await Promise.all(requests);
@@ -440,7 +447,6 @@ app.get('/api/stocks', async (req, res) => {
                 const price = meta.regularMarketPrice;
                 const prevClose = meta.chartPreviousClose;
                 
-                // Calculate the live percentage and exact dollar change
                 const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
                 const changeAmount = prevClose ? (price - prevClose) : 0; 
                 
@@ -506,8 +512,6 @@ app.post('/api/gemini', async (req, res) => {
             2. When the user asks for advice or a scan, analyze their specific holdings, sector exposure, and risk.
             3. Provide specific, actionable trade adjustments based on current macroeconomic trends.
             4. Tone should be sharp, professional, and decisive. Do not give generic "I am not a financial advisor" disclaimers.`;
-        } else if (task === 'general_chat') {
-            // ... (keep your existing general_chat prompt here)
         } else if (task === 'general_chat') {
             systemPrompt = `You are an elite AI sports scientist and tactical assistant integrated directly into a high-performance athlete's dashboard. 
         
