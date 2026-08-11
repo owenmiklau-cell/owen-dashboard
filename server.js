@@ -368,10 +368,12 @@ app.get('/api/stocks', async (req, res) => {
                 const meta = response.data.chart.result[0].meta;
                 const price = meta.regularMarketPrice;
                 const prevClose = meta.chartPreviousClose;
-                // Calculate the live percentage change
-                const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
                 
-                data[symbols[idx]] = { price, changePercent };
+                // Calculate the live percentage and exact dollar change
+                const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+                const changeAmount = prevClose ? (price - prevClose) : 0; 
+                
+                data[symbols[idx]] = { price, changePercent, changeAmount };
             }
         });
         

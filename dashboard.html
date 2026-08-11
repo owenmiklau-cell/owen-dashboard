@@ -362,8 +362,11 @@
         <input type="file" id="csvFileInput" accept=".csv" style="color: var(--text-primary); margin-bottom: 24px;">
         
         <div class="section-title">Total Portfolio Value</div>
-        <div style="font-size: 42px; font-weight: 800; color: var(--accent-green); margin-bottom: 24px;" id="portfolio-total">$0.00</div>
-
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px;">
+            <div style="font-size: 42px; font-weight: 800; color: var(--text-primary);" id="portfolio-total">$0.00</div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--text-tertiary);" id="portfolio-day-change">Awaiting market data...</div>
+        </div>
+        
         <div class="section-title">Active Positions</div>
         <ul class="gm-list" id="portfolioList">
           <li style="color: var(--text-tertiary); font-size: 14px;">Awaiting data...</li>
@@ -925,27 +928,52 @@
             </li>`;
         });
         
-        // 2. Ping Yahoo Finance for live data
+        // 2. Ping Yahoo Finance for live data & Calculate Daily P&L
         if(symbolsToFetch.length > 0) {
             try {
                 const res = await fetch(`/api/stocks?symbols=${symbolsToFetch.join(',')}`);
                 const liveData = await res.json();
                 
+                let dayChangeTotal = 0; // Tracks the total dollar swing
+                
                 holdings.forEach((stock, idx) => {
                    const displayEl = document.getElementById(`live-price-${idx}`);
+                   
                    if (stock.symbol === 'CASH (SPAXX)') {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Pegged to $1.00</span>`;
                    } else if(liveData && liveData[stock.symbol]) {
                        const price = liveData[stock.symbol].price.toFixed(2);
                        const change = liveData[stock.symbol].changePercent.toFixed(2);
+                       const changeAmt = liveData[stock.symbol].changeAmount;
+                       
+                       // Multiply the live change by your exact share count
+                       dayChangeTotal += (changeAmt * stock.shares);
+
                        const color = change >= 0 ? 'var(--accent-green)' : 'var(--danger)';
                        const sign = change > 0 ? '+' : '';
                        displayEl.innerHTML = `Live: $${price} <span style="color: ${color}; font-weight: 600;">(${sign}${change}%)</span>`;
                    } else {
-                       // NEW: Clearer text if data is unavailable (weekends/holidays)
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Market Closed / Data Offline</span>`;
                    }
                 });
+                
+                // 3. Render the Total Day Change underneath the main balance
+                const dayChangeEl = document.getElementById('portfolio-day-change');
+                if (dayChangeTotal !== 0) {
+                    const isPositive = dayChangeTotal >= 0;
+                    const color = isPositive ? 'var(--accent-green)' : 'var(--danger)';
+                    const sign = isPositive ? '+' : '';
+                    
+                    // Calculate portfolio-wide percentage change
+                    const prevTotal = totalValue - dayChangeTotal;
+                    const totalPercent = prevTotal > 0 ? ((dayChangeTotal / prevTotal) * 100).toFixed(2) : '0.00';
+                    
+                    const formattedDollar = Math.abs(dayChangeTotal).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    dayChangeEl.innerHTML = `<span style="color: ${color};">${sign}$${formattedDollar} (${sign}${totalPercent}%) Today</span>`;
+                } else {
+                    dayChangeEl.innerHTML = `<span style="color: var(--text-tertiary)">$0.00 (0.00%) Today</span>`;
+                }
+                
             } catch(e) { console.error("Live Price Fetch Failed"); }
         }
     }
