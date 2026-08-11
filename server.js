@@ -351,8 +351,12 @@ app.get('/api/stocks', async (req, res) => {
         const symbols = req.query.symbols; 
         if (!symbols) return res.json({});
         
-        // Use Yahoo Finance's open API to bypass needing a paid key
-        const response = await axios.get(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`);
+        // Bypass Yahoo's Cloud Blocker by disguising the server as a normal web browser
+        const response = await axios.get(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
         const quotes = response.data.quoteResponse.result;
         
         const data = {};

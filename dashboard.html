@@ -992,18 +992,28 @@
             sym = sym.replace(/\*/g, '');
             if (sym.includes('SPAXX')) sym = 'CASH (SPAXX)';
             
-            // MATH CLEANER: Strip all symbols so AI gets pure numbers
-            const valStr = obj['Current Value'] || '0';
-            const valNum = parseFloat(valStr.replace(/[$,]/g, '')) || 0;
-            const qtyStr = obj['Quantity'] || '0';
-            const qtyNum = parseFloat(qtyStr.replace(/[$,]/g, '')) || 0;
+            // 🔎 BULLETPROOF DATA FINDER: Hunts for the column no matter what Fidelity named it
+            let valKey = Object.keys(obj).find(k => k.toLowerCase().includes('value'));
+            let valStr = valKey ? obj[valKey] : '0';
             
+            let qtyKey = Object.keys(obj).find(k => k.toLowerCase().includes('quantity'));
+            let qtyStr = qtyKey ? obj[qtyKey] : '0';
+            
+            // 🧮 MATH CLEANER: Strips $ and commas
+            let valNum = parseFloat(valStr.replace(/[$\s,]/g, '')) || 0;
+            let qtyNum = parseFloat(qtyStr.replace(/[$\s,]/g, '')) || 0;
+            
+            // 💵 SPAXX SAFETY NET: If Fidelity blanks out the value but gives shares, 1 share = $1
+            if (sym === 'CASH (SPAXX)' && valNum === 0 && qtyNum > 0) {
+                valNum = qtyNum;
+            }
+
             newTotal += valNum;
             newHoldings.push({
                 symbol: sym,
-                shares: qtyNum,       // Pure number for AI
-                valueNum: valNum,     // Pure number for AI
-                valueStr: valStr      // Formatted string for UI
+                shares: qtyNum,
+                valueNum: valNum,
+                valueStr: '$' + valNum.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
             });
           }
         }
@@ -1021,7 +1031,7 @@
       };
       reader.readAsText(file);
     });
-
+    
     // --- 🤖 QUANT ANALYST CHAT ENGINE ---
     async function sendPortfolioChat() {
       const input = document.getElementById('portfolio-chat-input');
