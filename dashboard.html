@@ -1133,6 +1133,49 @@
       initHealthTab();
       loadSavedPortfolio();
       
+      // --- 📱 PULL-TO-REFRESH (PWA WEB APP) ---
+      let touchStartY = 0;
+      const ptrEl = document.createElement('div');
+      ptrEl.innerHTML = "↓ Pull to refresh";
+      Object.assign(ptrEl.style, {
+          position: 'absolute', top: '-50px', left: '0', width: '100%', textAlign: 'center',
+          color: 'var(--accent-purple)', fontSize: '11px', fontWeight: '700', 
+          letterSpacing: '0.2em', textTransform: 'uppercase', transition: 'top 0.2s', zIndex: '1000'
+      });
+      document.body.prepend(ptrEl);
+  
+      document.addEventListener('touchstart', e => {
+          // Only trigger if we are at the absolute top of the page
+          if (window.scrollY === 0) touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+  
+      document.addEventListener('touchmove', e => {
+          if (window.scrollY === 0 && touchStartY > 0) {
+              const pullDist = e.touches[0].clientY - touchStartY;
+              if (pullDist > 0) {
+                  ptrEl.style.transition = 'none'; // Lock to finger
+                  ptrEl.style.top = Math.min(pullDist - 50, 20) + 'px';
+                  ptrEl.innerHTML = pullDist > 80 ? "↻ Release to sync" : "↓ Pull to refresh";
+              }
+          }
+      }, { passive: true });
+  
+      document.addEventListener('touchend', e => {
+          if (touchStartY > 0) {
+              const pullDist = e.changedTouches[0].clientY - touchStartY;
+              ptrEl.style.transition = 'top 0.3s'; // Snap back animation
+              if (pullDist > 80 && window.scrollY === 0) {
+                  ptrEl.innerHTML = "⚡ Syncing...";
+                  ptrEl.style.top = '20px';
+                  // Force the browser to grab fresh data from the Render server
+                  setTimeout(() => window.location.reload(), 400); 
+              } else {
+                  ptrEl.style.top = '-50px';
+              }
+              touchStartY = 0;
+          }
+      });      
+
       // --- 🧠 AI Coach Button Logic ---
       document.getElementById('btn-ask-coach').addEventListener('click', async () => {
         const btn = document.getElementById('btn-ask-coach');
