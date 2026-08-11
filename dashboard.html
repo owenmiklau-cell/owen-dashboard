@@ -186,6 +186,7 @@
     <button class="tab-btn active" onclick="openTab(event, 'Overview')">Command Center</button>
     <button class="tab-btn" onclick="openTab(event, 'Health')">Performance Engine</button>
     <button class="tab-btn" onclick="openTab(event, 'Portfolio')">Portfolio</button>
+    <button class="tab-btn" onclick="openTab(event, 'Mindset')">Mindset Engine</button>
   </div>
 
   <div id="Overview" class="tab-content active">
@@ -204,23 +205,19 @@
       </div>
 
       <div class="gm-card">
-        <div class="day-ring-wrap">
-          <div class="ring-container">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-track" cx="60" cy="60" r="52"></circle>
-              <circle class="ring-fill" id="dayRingFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
-            </svg>
-            <div class="ring-center-content">
-              <div class="ring-percent" id="dayRingPercent">—</div>
-              <div class="ring-phase" id="dayRingPhase">LOADING</div>
-            </div>
-          </div>
-          <div class="ring-details">
-            <div class="ring-status-line" id="dayRingStatus">Syncing timeline...</div>
-            <div class="ring-remaining" id="dayRingRemaining">--h --m</div>
-            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px;" id="dayRingClock">--:--</div>
-          </div>
-        </div>
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+             <div class="section-title" style="margin: 0;">Habit Consistency</div>
+             <select id="chart-timeframe" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                 <option value="7">7 Days</option>
+                 <option value="30" selected>30 Days</option>
+                 <option value="90">90 Days</option>
+                 <option value="0">All Time</option>
+             </select>
+         </div>
+         <div class="chart-container">
+           <canvas id="habitChart"></canvas>
+         </div>
+      </div>
       </div>
           
       <div class="section-title">Execution</div>
@@ -406,6 +403,59 @@
           <input type="text" id="chat-input" placeholder="Ask about your stats or plan...">
           <button id="btn-send-chat">Send</button>
       </div>
+    </div>
+  </div>
+
+<div id="Mindset" class="tab-content">
+    <div class="container">
+      
+      <div class="gm-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <div class="section-title" style="margin: 0;">Core Habits</div>
+            </div>
+            <button id="btn-edit-habits" style="background: transparent; color: var(--accent-purple); border: none; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;">⚙ Edit</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;" id="habit-container">
+            <div style="color: var(--text-tertiary); font-size: 14px;">Loading habits...</div>
+        </div>
+        
+        <div id="habit-edit-ui" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--card-border);">
+            <div class="gm-input-wrap" style="margin-top: 0;">
+                <input type="text" id="new-habit-input" placeholder="Add a new daily habit...">
+                <button class="gm-add-btn" id="btn-add-habit" style="background: var(--accent-purple); color: #fff;">Add</button>
+            </div>
+            <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px;">Click the red 'X' on a habit above to delete it.</p>
+        </div>
+      </div>
+
+      <div class="gm-card">
+         <div class="section-title">30-Day Consistency</div>
+         <div class="chart-container">
+           <canvas id="habitChart"></canvas>
+         </div>
+      </div>
+
+      <div class="gm-card">
+        <div class="section-title">Tactical Reflection</div>
+        <textarea id="journal-input" placeholder="Brain-dump your focus for today, or reflect on a recent practice/game. What went well? Where did you lose focus?" style="width: 100%; height: 150px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; color: var(--text-primary); font-family: var(--font-body); font-size: 15px; outline: none; resize: none; margin-bottom: 16px;"></textarea>
+        
+        <div style="display: flex; gap: 12px;">
+            <button class="gm-add-btn" id="btn-save-journal" style="flex: 1; background: var(--text-primary); color: #000;">💾 Save Log</button>
+            <button class="gm-add-btn" id="btn-analyze-mindset" style="flex: 1; background: var(--accent-purple); color: #fff;">🧠 AI Coach</button>
+        </div>
+      </div>
+
+      <div class="gm-card" id="mindset-ai-card" style="display: none;">
+        <div class="ai-header">
+          <h3><span style="font-size: 24px;">🧠</span> AI Psychologist Feedback</h3>
+        </div>
+        <div id="mindset-ai-response" class="ai-response-box">
+          Analyzing mindset...
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1117,6 +1167,212 @@
       }
       historyBox.scrollTop = historyBox.scrollHeight;
     }
+
+// --- 🧠 MINDSET & JOURNAL ENGINE (DYNAMIC) ---
+    let masterHabitList = [];
+    let isEditingHabits = false;
+
+    // 1. Fetch Master List and Render Checkboxes
+    async function renderHabitUI() {
+        const container = document.getElementById('habit-container');
+        container.innerHTML = '';
+        
+        if (masterHabitList.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px;">No habits set. Click Edit to add some.</div>';
+            return;
+        }
+
+        masterHabitList.forEach((habit, idx) => {
+            const safeId = 'habit-' + idx;
+            container.innerHTML += `
+            <div class="goal-row" style="justify-content: space-between;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 12px; flex: 1;">
+                    <input type="checkbox" id="${safeId}" data-name="${habit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-purple);">
+                    <div class="goal-text" style="font-weight: 600;">${habit}</div>
+                </label>
+                ${isEditingHabits ? `<button onclick="deleteHabit(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; font-weight: bold;">×</button>` : ''}
+            </div>`;
+        });
+
+        // Re-attach save listeners to the new checkboxes
+        document.querySelectorAll('.habit-check').forEach(box => {
+            box.addEventListener('change', saveJournal);
+        });
+    }
+
+    // 2. Load Today's Journal & The 30-Day Chart
+    async function loadJournal() {
+        try {
+            // Get Master Habit List
+            const masterRes = await fetch('/api/habits/master');
+            masterHabitList = await masterRes.json();
+            renderHabitUI();
+
+            // Get Today's Data
+            const today = getActiveDateString();
+            const res = await fetch(`/api/journal?date=${today}`);
+            const data = await res.json();
+            
+            document.getElementById('journal-input').value = data.reflection || '';
+            const completedHabits = data.habits || {};
+            
+            document.querySelectorAll('.habit-check').forEach(box => {
+                const habitName = box.getAttribute('data-name');
+                box.checked = completedHabits[habitName] === true;
+            });
+            
+            // Draw the 30-Day Consistency Chart
+            renderHabitChart();
+
+        } catch(e) { console.error("Failed to load journal ecosystem"); }
+    }
+
+    // 3. Save the Journal Data
+    async function saveJournal() {
+        const btn = document.getElementById('btn-save-journal');
+        const originalText = btn.innerText;
+        btn.innerText = "Saving...";
+        
+        const today = getActiveDateString();
+        const reflection = document.getElementById('journal-input').value;
+        const habits = {};
+        
+        document.querySelectorAll('.habit-check').forEach(box => {
+            const habitName = box.getAttribute('data-name');
+            habits[habitName] = box.checked;
+        });
+        
+        try {
+            await fetch('/api/journal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: today, habits, reflection })
+            });
+            btn.style.background = "var(--accent-green)";
+            btn.innerText = "✓ Saved!";
+            renderHabitChart(); // Update chart instantly on save
+        } catch (err) { btn.innerText = "Error"; }
+        
+        setTimeout(() => {
+            btn.style.background = "var(--text-primary)";
+            btn.innerText = originalText;
+        }, 2000);
+    }
+
+    // 4. Edit Habit Logic
+    document.getElementById('btn-edit-habits').addEventListener('click', () => {
+        isEditingHabits = !isEditingHabits;
+        document.getElementById('habit-edit-ui').style.display = isEditingHabits ? 'block' : 'none';
+        document.getElementById('btn-edit-habits').innerText = isEditingHabits ? 'Done' : '⚙ Edit';
+        renderHabitUI();
+        // Re-check boxes after re-render
+        loadJournal(); 
+    });
+
+    document.getElementById('btn-add-habit').addEventListener('click', async () => {
+        const input = document.getElementById('new-habit-input');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        masterHabitList.push(text);
+        input.value = '';
+        renderHabitUI();
+        
+        await fetch('/api/habits/master', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ habitList: masterHabitList })
+        });
+        loadJournal(); // Reload checks
+    });
+
+    async function deleteHabit(index) {
+        masterHabitList.splice(index, 1);
+        renderHabitUI();
+        await fetch('/api/habits/master', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ habitList: masterHabitList })
+        });
+        loadJournal();
+    }
+    // 5. Draw the Dynamic Habit Chart
+    async function renderHabitChart() {
+        try {
+            // Check what timeframe the dropdown is currently set to
+            const timeframe = document.getElementById('chart-timeframe').value;
+            
+            // Ping the backend with the requested number of days
+            const res = await fetch(`/api/journal/history?days=${timeframe}`);
+            const history = await res.json();
+            
+            const labels = history.map(day => day.date.slice(5)); // 'MM-DD'
+            const dataPoints = history.map(day => {
+                let count = 0;
+                for (let key in day.habits) { if (day.habits[key] === true) count++; }
+                return count;
+            });
+
+            const ctx = document.getElementById('habitChart').getContext('2d');
+            if (window.myHabitChart) window.myHabitChart.destroy();
+
+            window.myHabitChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length > 0 ? labels : [getActiveDateString().slice(5)],
+                    datasets: [{
+                        label: 'Habits Completed',
+                        data: dataPoints.length > 0 ? dataPoints : [0],
+                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            suggestedMax: masterHabitList.length || 4, 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#71717A', stepSize: 1 } 
+                        },
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                color: '#71717A',
+                                maxTicksLimit: 14 // CRITICAL: Prevents 'All Time' from crushing the text together
+                            } 
+                        }
+                    }
+                }
+            });
+        } catch (err) { console.error("Chart Failed", err); }
+    }
+
+    // NEW: Listen for the dropdown changing and instantly redraw the chart
+    document.getElementById('chart-timeframe').addEventListener('change', renderHabitChart);
+    document.getElementById('btn-analyze-mindset').addEventListener('click', async () => {
+        const text = document.getElementById('journal-input').value.trim();
+        if (!text) return alert("Write something in your journal first!");
+        
+        await saveJournal();
+        document.getElementById('mindset-ai-card').style.display = 'block';
+        document.getElementById('mindset-ai-response').innerText = "Analyzing mental state and habit completion...";
+        
+        const habits = {};
+        document.querySelectorAll('.habit-check').forEach(box => { habits[box.getAttribute('data-name')] = box.checked; });
+        
+        try {
+            const res = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: 'mindset_chat', content: text, contextData: { habits } })
+            });
+            const data = await res.json();
+            document.getElementById('mindset-ai-response').innerText = (data.reply || data.error).replace(/\*\*/g, '');
+        } catch(err) { document.getElementById('mindset-ai-response').innerText = "Coach offline."; }
+    });
     // ---init---
     document.getElementById('btn-portfolio-chat').addEventListener('click', sendPortfolioChat);
     document.getElementById('portfolio-chat-input').addEventListener('keydown', (e) => { if(e.key === 'Enter') sendPortfolioChat(); });// --- Init ---
@@ -1132,6 +1388,7 @@
       setInterval(updateTicker, 5000);
       initHealthTab();
       loadSavedPortfolio();
+      loadJournal();
       
       // --- 📱 PULL-TO-REFRESH (PWA WEB APP) ---
       let touchStartY = 0;

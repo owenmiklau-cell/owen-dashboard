@@ -45,6 +45,20 @@ const portfolioSchema = new mongoose.Schema({
     holdings: Array,
     totalValue: Number
 });
+// --- 🧠 MINDSET & JOURNAL SCHEMA ---
+const journalSchema = new mongoose.Schema({
+    identifier: { type: String, default: 'primary_user' },
+    date: { type: String, required: true },
+    habits: { type: Object, default: {} },
+    reflection: { type: String, default: '' }
+});
+// --- ⚙️ USER SETTINGS SCHEMA (DYNAMIC HABITS) ---
+const settingsSchema = new mongoose.Schema({
+    identifier: { type: String, default: 'primary_user', unique: true },
+    habitList: { type: Array, default: ['Hydration (1 Gallon)', '10 Mins Match Visualization', 'Mobility / Deep Stretching', 'Read 15 Pages'] }
+});
+const Settings = mongoose.model('Settings', settingsSchema);
+const JournalLog = mongoose.model('JournalLog', journalSchema);
 const Portfolio = mongoose.model('Portfolio', portfolioSchema);
 // --- 🔐 PERSISTENT TOKEN MANAGEMENT ---
 let storedAccessToken = null;
@@ -345,6 +359,63 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
+app.get('/api/journal/history', async (req, res) => {
+    try {
+        const days = parseInt(req.query.days) || 30; // Defaults to 30 if blank
+        
+        // Grab the most recent entries (sorted newest to oldest)
+        let history = await JournalLog.find({ identifier: 'primary_user' })
+            .sort({ date: -1 })
+            .limit(days === 0 ? 0 : days); // Passing 0 to MongoDB tells it to fetch "All Time"
+            
+        // Reverse it back to chronological order for the chart (oldest left, newest right)
+        history = history.reverse(); 
+        
+        res.json(history);
+    } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
+});
+
+app.post('/api/journal', async (req, res) => {
+    try {
+        const { date, habits, reflection } = req.body;
+        await JournalLog.findOneAndUpdate(
+            { identifier: 'primary_user', date: date },
+            { habits, reflection },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save journal" });
+    }
+});
+
+// --- ⚙️ DYNAMIC HABIT ROUTES ---
+app.get('/api/habits/master', async (req, res) => {
+    try {
+        const doc = await Settings.findOne({ identifier: 'primary_user' });
+        res.json(doc ? doc.habitList : ['Hydration (1 Gallon)', '10 Mins Match Visualization', 'Mobility / Deep Stretching', 'Read 15 Pages']);
+    } catch (err) { res.status(500).json({ error: "Failed to fetch habits" }); }
+});
+
+app.post('/api/habits/master', async (req, res) => {
+    try {
+        await Settings.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { habitList: req.body.habitList },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
+});
+
+app.get('/api/journal/history', async (req, res) => {
+    try {
+        // Grab the last 30 days of journal entries for the chart
+        const history = await JournalLog.find({ identifier: 'primary_user' }).sort({ date: 1 }).limit(30);
+        res.json(history);
+    } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
+});
+
 // --- 📈 LIVE STOCK MARKET ROUTE (FIREWALL BYPASS) ---
 app.get('/api/stocks', async (req, res) => {
     try {
@@ -376,7 +447,7 @@ app.get('/api/stocks', async (req, res) => {
                 data[symbols[idx]] = { price, changePercent, changeAmount };
             }
         });
-        
+
         res.json(data);
     } catch (error) {
         console.error("Stock API Error:", error.message);
@@ -439,7 +510,7 @@ app.post('/api/gemini', async (req, res) => {
             // ... (keep your existing general_chat prompt here)
         } else if (task === 'general_chat') {
             systemPrompt = `You are an elite AI sports scientist and tactical assistant integrated directly into a high-performance athlete's dashboard. 
-            
+        
             You have full, real-time visibility into their system right now. Here is their exact live data:
             ${JSON.stringify(contextData, null, 2)}
             
@@ -449,6 +520,15 @@ app.post('/api/gemini', async (req, res) => {
             - If they ask "What should I do before bed?", look at their Tomorrow Plan and Time Until Bed.
             
             Tone: Punchy, elite, scientific, and direct. Keep it short. Do not use Markdown bolding (**) in your responses, just plain text.`;
+        } else if (task === 'mindset_chat') {
+            systemPrompt = `You are an elite sports psychologist coaching a highly driven 14-year-old student-athlete. 
+            They have just submitted their daily journal and habit tracker.
+            
+            Their Journal: "${content}"
+            Habits Completed Today: ${JSON.stringify(contextData.habits)}
+            
+            Analyze their mindset. Look for signs of burnout, anxiety, or hyper-focus. 
+            Provide a short, punchy 3-bullet-point response giving them tactical mental advice for tomorrow. Keep it professional, intense, and encouraging.`;
         }
 
         const response = await ai.models.generateContent({
