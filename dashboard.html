@@ -271,8 +271,20 @@
             <div class="val" style="color: var(--accent-purple);"><span id="tab-healthscore">--</span></div>
             <div style="font-size: 12px; color: var(--text-tertiary);">Readiness Balance</div>
           </div>
-          <div class="section-title" style="margin-top: 10px;">Subjective State</div>
-        <div class="gm-card" style="margin-bottom: 24px;">
+          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-green);">
+            <h3>Recovery</h3>
+            <div class="val" style="color: var(--accent-green);"><span id="tab-recovery">--</span><span class="unit">%</span></div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">CNS & Sleep</div>
+          </div>
+          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-blue);">
+            <h3>Day Strain</h3>
+            <div class="val" style="color: var(--accent-blue);"><span id="tab-strain">--</span><span class="unit">%</span></div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">Cardiovascular Load</div>
+          </div>
+        </div>
+
+        <div class="section-title">Subjective State</div>
+        <div class="gm-card" style="margin-bottom: 30px;">
           <div class="slider-grid">
             <div class="slider-row">
               <div class="slider-header"><span>Muscle Soreness</span> <span class="slider-val" id="val-sore">1</span></div>
@@ -287,17 +299,6 @@
               <input type="range" id="slide-motivate" min="1" max="10" value="10" oninput="document.getElementById('val-motivate').innerText = this.value;">
             </div>
             <button class="gm-add-btn" id="saveSubjectiveBtn" style="margin-top: 16px; width: 100%; padding: 12px; font-size: 14px; background: var(--accent-purple); color: white; transition: 0.3s;">Submit Log</button>
-          </div>
-        </div>
-          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-green);">
-            <h3>Recovery</h3>
-            <div class="val" style="color: var(--accent-green);"><span id="tab-recovery">--</span><span class="unit">%</span></div>
-            <div style="font-size: 12px; color: var(--text-tertiary);">CNS & Sleep</div>
-          </div>
-          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-blue);">
-            <h3>Day Strain</h3>
-            <div class="val" style="color: var(--accent-blue);"><span id="tab-strain">--</span><span class="unit">%</span></div>
-            <div style="font-size: 12px; color: var(--text-tertiary);">Cardiovascular Load</div>
           </div>
         </div>
 
@@ -448,6 +449,11 @@
         </div>
         <div id="mindset-ai-response" class="ai-response-box">
           Analyzing mindset...
+
+         <div class="section-title" style="margin-top: 24px;">The Cognitive Vault</div>
+      <div class="gm-card" id="journal-vault" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+         <div style="color: var(--text-tertiary); font-size: 14px;">Loading archives...</div>
+      </div> 
         </div>
       </div>
 
@@ -536,9 +542,25 @@
       }
     }
 
-    // --- Subjective State Logic ---
+   // --- Subjective State Logic ---
     function loadSubjective() {
-      const state = JSON.parse(localStorage.getItem('subjectiveState')) || { sore: 1, energy: 10, motivate: 10 };
+      const savedDate = localStorage.getItem('subjectiveStateDate');
+      const today = getActiveDateString();
+      const btn = document.getElementById('saveSubjectiveBtn');
+      
+      let state;
+      if (savedDate === today) {
+        // If they already submitted today, load their saved numbers and lock the button visually
+        state = JSON.parse(localStorage.getItem('subjectiveState')) || { sore: 1, energy: 10, motivate: 10 };
+        btn.innerText = "✓ Logged for Today";
+        btn.style.background = "var(--accent-green)";
+      } else {
+        // If it's a new day, reset the sliders to default so they don't look at stale data
+        state = { sore: 1, energy: 10, motivate: 10 };
+        btn.innerText = "Submit Log";
+        btn.style.background = "var(--accent-purple)";
+      }
+      
       document.getElementById('slide-sore').value = state.sore; document.getElementById('val-sore').innerText = state.sore;
       document.getElementById('slide-energy').value = state.energy; document.getElementById('val-energy').innerText = state.energy;
       document.getElementById('slide-motivate').value = state.motivate; document.getElementById('val-motivate').innerText = state.motivate;
@@ -552,6 +574,8 @@
       };
       
       localStorage.setItem('subjectiveState', JSON.stringify(state));
+      // NEW: Lock in the date so it resets at midnight
+      localStorage.setItem('subjectiveStateDate', getActiveDateString()); 
 
       await fetch('/api/save-day', {
         method: 'POST',
@@ -565,14 +589,9 @@
       });
       
       const btn = document.getElementById('saveSubjectiveBtn');
-      btn.innerText = "✓ Logged!";
+      btn.innerText = "✓ Logged for Today";
       btn.style.background = "var(--accent-green)";
-      setTimeout(() => {
-        btn.innerText = "Submit Log";
-        btn.style.background = "var(--accent-purple)";
-      }, 2000);
     }
-
     // --- Core Logic Config ---
     const WAKE_HOUR = 8;
     const SLEEP_HOUR = 24;
@@ -1174,6 +1193,41 @@
         });
     }
 
+    async function loadVault() {
+        try {
+            // Fetch All-Time history (0 days)
+            const res = await fetch('/api/journal/history?days=0');
+            const history = await res.json();
+            
+            const vault = document.getElementById('journal-vault');
+            vault.innerHTML = '';
+            
+            if (history.length === 0) {
+                vault.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px;">Vault is empty. Log your first entry above.</div>';
+                return;
+            }
+
+            history.forEach(log => {
+                const title = log.title || "Daily Tactical Log";
+                const ref = log.reflection || "No reflection logged.";
+                
+                // Format the date securely
+                const [y, m, d] = log.date.split('-');
+                const dateObj = new Date(y, m - 1, d);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                vault.innerHTML += `
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); padding: 16px; border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: var(--accent-purple); font-size: 15px;">${title}</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono);">${dateStr}</div>
+                    </div>
+                    <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;">${ref}</div>
+                </div>`;
+            });
+        } catch(e) { console.error("Vault offline"); }
+    }
+
     async function loadJournal() {
         try {
             const masterRes = await fetch('/api/habits/master');
@@ -1193,6 +1247,7 @@
             });
             
             renderHabitChart();
+            loadVault(); // <--- ADDED HERE
         } catch(e) { console.error("Failed to load journal ecosystem"); }
     }
 
@@ -1218,7 +1273,8 @@
             });
             btn.style.background = "var(--accent-green)";
             btn.innerText = "✓ Saved!";
-            renderHabitChart(); 
+            renderHabitChart();
+            loadVault(); 
         } catch (err) { btn.innerText = "Error"; }
         
         setTimeout(() => {

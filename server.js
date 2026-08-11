@@ -49,7 +49,8 @@ const journalSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user' },
     date: { type: String, required: true },
     habits: { type: Object, default: {} },
-    reflection: { type: String, default: '' }
+    reflection: { type: String, default: '' },
+    title: { type: String, default: 'Daily Tactical Log' } // NEW: Marvin's Auto-Title
 });
 const JournalLog = mongoose.model('JournalLog', journalSchema);
 
@@ -367,15 +368,32 @@ app.get('/api/habits/master', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Failed to fetch habits" }); }
 });
 
-app.post('/api/habits/master', async (req, res) => {
+app.post('/api/journal', async (req, res) => {
     try {
-        await Settings.findOneAndUpdate(
-            { identifier: 'primary_user' },
-            { habitList: req.body.habitList },
+        const { date, habits, reflection } = req.body;
+        let title = "Daily Tactical Log";
+
+        // Have Marvin auto-generate a title if you actually wrote a reflection
+        if (reflection && reflection.length > 5) {
+            try {
+                const prompt = `You are Marvin. Read this athlete's daily journal: "${reflection}". Generate a punchy, 3-to-4 word title summarizing it. Return ONLY the title.`;
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3.5-flash',
+                    contents: prompt,
+                });
+                title = response.text.replace(/["*]/g, '').trim();
+            } catch (err) { console.error("Marvin Title Gen Offline"); }
+        }
+
+        await JournalLog.findOneAndUpdate(
+            { identifier: 'primary_user', date: date },
+            { habits, reflection, title },
             { upsert: true }
         );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save journal" });
+    }
 });
 
 app.get('/api/journal', async (req, res) => {
