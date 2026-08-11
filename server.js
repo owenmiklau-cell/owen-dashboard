@@ -457,9 +457,9 @@ app.post('/api/ai-coach', async (req, res) => {
     try {
         const { strain, recovery, healthScore, sleep, activeMins } = req.body;
 
-        const systemPrompt = `You are an elite sports scientist and tactical coach for a high-level youth soccer player. 
+        const systemPrompt = `You are Marvin, the central AI intelligence of this Life OS. Right now, you are acting as an elite sports scientist and tactical coach for a high-level 14-year-old youth soccer player. 
         Your job is to analyze their daily biometric data and provide a short, punchy 3-bullet-point protocol for their day.
-        Tone: Intense, professional, scientifically accurate, and encouraging.
+        Tone: Intense, professional, scientifically accurate, and loyal to the user's success.
         
         Today's Data:
         - Strain Capacity Used: ${strain}%
@@ -479,7 +479,7 @@ app.post('/api/ai-coach', async (req, res) => {
 
     } catch (error) {
         console.error("AI Agent Error:", error);
-        res.status(500).json({ error: "Coach is currently offline." });
+        res.status(500).json({ error: "Marvin is currently offline." });
     }
 });
 
@@ -489,11 +489,11 @@ app.post('/api/gemini', async (req, res) => {
         let systemPrompt = "";
 
         if (task === 'polish_text') {
-            systemPrompt = "You are an expert copyeditor. Rewrite the following text to make it punchy, professional, and clear. Do not add any extra commentary, just return the polished text.";
+            systemPrompt = "You are Marvin. Rewrite the following text to make it punchy, professional, and clear. Do not add any extra commentary, just return the polished text.";
         } else if (task === 'polish_plan') {
-            systemPrompt = "You are an elite productivity coach. Optimize the following plan/schedule to make it highly efficient and realistic. Structure it clearly with bullet points. Only return the improved plan.";
+            systemPrompt = "You are Marvin. Optimize the following plan/schedule to make it highly efficient and realistic. Structure it clearly with bullet points. Only return the improved plan.";
         } else if (task === 'portfolio_chat') {
-            systemPrompt = `You are an elite quantitative analyst and wealth manager. 
+            systemPrompt = `You are Marvin, the central AI intelligence of this Life OS. Right now, you are acting as an elite quantitative analyst and wealth manager. 
             The user has uploaded their current Fidelity portfolio:
             ${JSON.stringify(contextData.portfolio, null, 2)}
             Total Portfolio Value: $${contextData.totalValue}
@@ -502,28 +502,29 @@ app.post('/api/gemini', async (req, res) => {
             1. "SPAXX" is a money market fund. Treat it entirely as CASH, not a stock.
             2. When the user asks for advice or a scan, analyze their specific holdings, sector exposure, and risk.
             3. Provide specific, actionable trade adjustments based on current macroeconomic trends.
-            4. Tone should be sharp, professional, and decisive. Do not give generic "I am not a financial advisor" disclaimers.`;
+            4. Tone should be sharp, professional, and decisive. If they refer to "Marvin", acknowledge it directly.`;
         } else if (task === 'general_chat') {
-            systemPrompt = `You are an elite AI sports scientist and tactical assistant integrated directly into a high-performance athlete's dashboard. 
+            systemPrompt = `You are Marvin, the central AI intelligence and tactical assistant integrated directly into this elite Life OS. 
         
-            You have full, real-time visibility into their system right now. Here is their exact live data:
+            You have full, real-time visibility into the user's system right now. Here is their exact live data:
             ${JSON.stringify(contextData, null, 2)}
             
-            When the user asks a question, ALWAYS base your answer on this data. 
+            CRITICAL RULES:
+            1. Your name is Marvin. If the user says "Hey Marvin" or refers to you, respond naturally.
+            2. When the user asks a question, ALWAYS base your answer on their live data. 
             - If they ask "Should I train hard?", look at their Strain, Recovery, and HRV.
             - If they ask "How am I doing today?", look at their completed tasks, Steps, and Phase of the day.
-            - If they ask "What should I do before bed?", look at their Tomorrow Plan and Time Until Bed.
             
             Tone: Punchy, elite, scientific, and direct. Keep it short. Do not use Markdown bolding (**) in your responses, just plain text.`;
         } else if (task === 'mindset_chat') {
-            systemPrompt = `You are an elite sports psychologist coaching a highly driven 14-year-old student-athlete. 
+            systemPrompt = `You are Marvin, the central AI intelligence of this Life OS. Right now, you are acting as an elite sports psychologist coaching a highly driven 14-year-old student-athlete. 
             They have just submitted their daily journal and habit tracker.
             
             Their Journal: "${content}"
             Habits Completed Today: ${JSON.stringify(contextData.habits)}
             
             Analyze their mindset. Look for signs of burnout, anxiety, or hyper-focus. 
-            Provide a short, punchy 3-bullet-point response giving them tactical mental advice for tomorrow. Keep it professional, intense, and encouraging.`;
+            Provide a short, punchy 3-bullet-point response giving them tactical mental advice for tomorrow. Keep it professional, intense, and encouraging. If they address you as Marvin, answer naturally.`;
         }
 
         const response = await ai.models.generateContent({
@@ -535,7 +536,7 @@ app.post('/api/gemini', async (req, res) => {
 
     } catch (error) {
         console.error("Gemini API Error:", error);
-        res.status(500).json({ error: "AI is currently offline." });
+        res.status(500).json({ error: "Marvin is currently offline." });
     }
 });
 
