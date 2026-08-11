@@ -345,26 +345,34 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
-// --- 📈 LIVE STOCK MARKET ROUTE ---
+// --- 📈 LIVE STOCK MARKET ROUTE (FIREWALL BYPASS) ---
 app.get('/api/stocks', async (req, res) => {
     try {
-        const symbols = req.query.symbols; 
-        if (!symbols) return res.json({});
+        const symbolsStr = req.query.symbols; 
+        if (!symbolsStr) return res.json({});
         
-        // Bypass Yahoo's Cloud Blocker by disguising the server as a normal web browser
-        const response = await axios.get(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        });
-        const quotes = response.data.quoteResponse.result;
-        
+        const symbols = symbolsStr.split(',');
         const data = {};
-        quotes.forEach(q => {
-            data[q.symbol] = { 
-                price: q.regularMarketPrice, 
-                changePercent: q.regularMarketChangePercent 
-            };
+        
+        // Use Yahoo's open v8 chart endpoint to completely bypass server blocking
+        const requests = symbols.map(sym => 
+            axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`, {
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            }).catch(() => null) // Silently ignore individual ticker errors
+        );
+
+        const responses = await Promise.all(requests);
+        
+        responses.forEach((response, idx) => {
+            if (response && response.data && response.data.chart && response.data.chart.result) {
+                const meta = response.data.chart.result[0].meta;
+                const price = meta.regularMarketPrice;
+                const prevClose = meta.chartPreviousClose;
+                // Calculate the live percentage change
+                const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+                
+                data[symbols[idx]] = { price, changePercent };
+            }
         });
         
         res.json(data);
