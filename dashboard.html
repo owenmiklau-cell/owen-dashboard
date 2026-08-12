@@ -14,7 +14,7 @@
 <style>
     :root {
       /* --- PREMIUM MATTE GRAPHITE & BURNT ORANGE PALETTE --- */
-      --bg-dark: #09090b;
+      --bg-dark: #0c0c0e;
       --card-bg: rgba(20, 20, 24, 0.6);
       --card-border: rgba(255, 255, 255, 0.08);
       --card-border-hover: rgba(232, 93, 4, 0.35);
@@ -209,7 +209,7 @@
       .gm-card { padding: 20px; }
       .top-header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
       .dash-title { font-size: 24px; }
-      .day-ring-wrap { flex-direction: column; gap: 20px; text-align: center; }
+      .day-ring-wrap { flex-direction: column; gap: 24px; text-align: center; }
       .health-hero-grid { grid-template-columns: 1fr; }
       .gm-input-wrap { flex-direction: column; gap: 12px; }
       .chat-input-area { flex-direction: column; }
@@ -573,6 +573,12 @@
       
       navDrawer.classList.remove('open');
       navOverlay.classList.remove('open');
+
+      // 🔥 BLIND CANVAS FIX: Force Chart.js to recalculate dimensions now that the tab is visible
+      setTimeout(() => {
+          if (tabName === 'Health' && window.myTrendChart) window.myTrendChart.resize();
+          if (tabName === 'Mindset' && window.myHabitChart) window.myHabitChart.resize();
+      }, 50);
     }
 
     // --- Weather ---
@@ -870,7 +876,7 @@
         const data = await response.json();
         if (data) {
           document.getElementById('health-auth-view').style.display = 'none';
-          document.getElementById('health-data-view').style.display = 'grid'; // MUST BE GRID
+          document.getElementById('health-data-view').style.display = 'grid'; 
           
           document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
           document.getElementById('tab-recovery').innerText = data.recovery || '--';
@@ -903,6 +909,7 @@
     }
 
     // --- 🧠 Gemini AI ---
+    // 🔥 GHOST CRASH FIX: Forces safe string returns so Javascript never throws an undefined crash
     async function callGemini(task, content, contextData = {}) {
       try {
         const response = await fetch('/api/gemini', {
@@ -911,8 +918,8 @@
           body: JSON.stringify({ task, content, contextData })
         });
         const data = await response.json();
-        return data.reply || data.error;
-      } catch (err) { return "Connection failed."; }
+        return data.reply || data.error || data.advice || "Error: Marvin returned empty data.";
+      } catch (err) { return "Connection to Marvin failed."; }
     }
 
     function getOmniscientData() {
@@ -994,7 +1001,9 @@
       const aiResponse = await callGemini('general_chat', question, getOmniscientData());
       
       const loadingBubble = document.getElementById(loadingId);
-      loadingBubble.innerHTML = aiResponse.replace(/\*\*/g, '');
+      // Safety check applied
+      const safeText = typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse);
+      loadingBubble.innerHTML = safeText.replace(/\*\*/g, '');
       loadingBubble.style.opacity = '1';
       chatHistory.scrollTop = chatHistory.scrollHeight;
     }
@@ -1193,7 +1202,8 @@
           });
           const data = await res.json();
           const loadingBubble = document.getElementById(loadingId);
-          loadingBubble.innerHTML = (data.reply || data.error).replace(/\*\*/g, '');
+          const safeText = typeof (data.reply || data.error) === 'string' ? (data.reply || data.error) : "No response.";
+          loadingBubble.innerHTML = safeText.replace(/\*\*/g, '');
           loadingBubble.style.opacity = '1';
       } catch(err) {
           document.getElementById(loadingId).innerText = "Connection failed.";
@@ -1556,8 +1566,9 @@
           if (!text) return alert("Write something in your journal first!");
           
           await saveJournal();
-          document.getElementById('mindset-ai-card').style.display = 'flex';
-          document.getElementById('mindset-ai-response').innerText = "Analyzing mental state and habit completion...";
+          
+          const aiResponseBox = document.getElementById('mindset-ai-response');
+          aiResponseBox.innerText = "Analyzing mental state and habit completion...";
           
           const habits = {};
           document.querySelectorAll('.habit-check').forEach(box => { habits[box.getAttribute('data-name')] = box.checked; });
@@ -1569,8 +1580,9 @@
                   body: JSON.stringify({ task: 'mindset_chat', content: text, contextData: { habits } })
               });
               const data = await res.json();
-              document.getElementById('mindset-ai-response').innerText = (data.reply || data.error).replace(/\*\*/g, '');
-          } catch(err) { document.getElementById('mindset-ai-response').innerText = "Coach offline."; }
+              const safeText = typeof (data.reply || data.error) === 'string' ? (data.reply || data.error) : "No response.";
+              aiResponseBox.innerText = safeText.replace(/\*\*/g, '');
+          } catch(err) { aiResponseBox.innerText = "Coach offline."; }
       });
       
       // PULL-TO-REFRESH
@@ -1636,7 +1648,8 @@
           });
           
           const data = await res.json();
-          document.getElementById('ai-response').innerText = data.advice || data.error;
+          const safeText = typeof (data.advice || data.error) === 'string' ? (data.advice || data.error) : "No response.";
+          document.getElementById('ai-response').innerText = safeText.replace(/\*\*/g, '');
         } catch (err) {
           document.getElementById('ai-response').innerText = "Coach offline. Check connection.";
         }
