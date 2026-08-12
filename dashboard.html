@@ -51,10 +51,17 @@
     .weather-widget { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--card-border); font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
     .weather-val { color: var(--text-primary); font-weight: 700; font-size: 14px; }
 
-    .tab-container { display: flex; background: rgba(255,255,255,0.05); padding: 6px; border-radius: 12px; width: fit-content; margin: 0 auto 20px auto; border: 1px solid var(--card-border); }
-    .tab-btn { background: transparent; border: none; color: var(--text-secondary); padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.2s ease; }
-    .tab-btn:hover { color: var(--text-primary); }
-    .tab-btn.active { background: rgba(255,255,255,0.1); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    /* --- Navigation Drawer --- */
+    .menu-btn { background: transparent; border: none; color: var(--text-primary); font-size: 24px; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+    .menu-btn:hover { background: rgba(255,255,255,0.1); }
+    .nav-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1999; opacity: 0; pointer-events: none; transition: 0.3s ease; }
+    .nav-overlay.open { opacity: 1; pointer-events: auto; }
+    .nav-drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: rgba(9, 9, 11, 0.95); border-right: 1px solid var(--card-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); z-index: 2000; transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); padding: 60px 20px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .nav-drawer.open { left: 0; }
+    .drawer-header { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; padding-left: 16px; }
+    .drawer-link { display: flex; align-items: center; gap: 16px; background: transparent; border: none; color: var(--text-secondary); padding: 16px; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 12px; transition: all 0.2s ease; text-align: left; width: 100%; }
+    .drawer-link:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .drawer-link.active { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.3); }
     
     .tab-content { display: none; width: 100%; animation: fadeIn 0.3s ease; }
     .tab-content.active { display: block; }
@@ -181,18 +188,26 @@
 </head>
 <body>
 
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <div class="nav-drawer" id="nav-drawer">
+     <div class="drawer-header">System Modules</div>
+     <button class="drawer-link active" onclick="openTab(event, 'Overview')">⚡ Command Center</button>
+     <button class="drawer-link" onclick="openTab(event, 'Health')">🧬 Performance Engine</button>
+     <button class="drawer-link" onclick="openTab(event, 'Portfolio')">📈 Portfolio</button>
+     <button class="drawer-link" onclick="openTab(event, 'Mindset')">🧠 Mindset Engine</button>
+     <button class="drawer-link" onclick="openTab(event, 'Logistics')">📅 Logistics Hub</button>
+  </div>
+
   <div class="top-header">
-    <h1 class="dash-title">Athlete OS</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="menu-btn" id="nav-toggle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <h1 class="dash-title">Athlete OS</h1>
+    </div>
     <div class="weather-widget" id="weatherWidget">
       <span>📍 Locating...</span>
     </div>
-  </div>
-
- <div class="tab-container">
-    <button class="tab-btn active" onclick="openTab(event, 'Overview')">Command Center</button>
-    <button class="tab-btn" onclick="openTab(event, 'Health')">Performance Engine</button>
-    <button class="tab-btn" onclick="openTab(event, 'Portfolio')">Portfolio</button>
-    <button class="tab-btn" onclick="openTab(event, 'Mindset')">Mindset Engine</button>
   </div>
 
   <div id="Overview" class="tab-content active">
@@ -456,6 +471,26 @@
     </div>
 </div>
 
+<div id="Logistics" class="tab-content">
+    <div class="container">
+      
+      <div class="section-title">Schedule Uplink</div>
+      <div class="gm-card">
+         <ul class="gm-list" id="calendar-list">
+            <li style="color: var(--text-tertiary); font-size: 14px;">Syncing agenda...</li>
+         </ul>
+      </div>
+
+      <div class="section-title" style="margin-top: 12px;">Academic Directives</div>
+      <div class="gm-card">
+         <ul class="gm-list" id="classroom-list">
+            <li style="color: var(--text-tertiary); font-size: 14px;">Syncing coursework...</li>
+         </ul>
+      </div>
+
+    </div>
+</div>
+
   <div id="ai-bottom-bar" class="bottom-bar collapsed">
     <div class="chat-header" id="chat-header-toggle">
       <div class="chat-header-inner">
@@ -499,29 +534,30 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
-    // --- Tab Logic ---
+// --- Navigation & Tab Logic ---
+    const navDrawer = document.getElementById('nav-drawer');
+    const navOverlay = document.getElementById('nav-overlay');
+
+    function toggleNav() {
+        navDrawer.classList.toggle('open');
+        navOverlay.classList.toggle('open');
+    }
+
+    document.getElementById('nav-toggle').addEventListener('click', toggleNav);
+    navOverlay.addEventListener('click', toggleNav); // Clicking the dark background closes the menu
+
     function openTab(evt, tabName) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-      document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".drawer-link").forEach(el => el.classList.remove("active"));
+      
       document.getElementById(tabName).classList.add("active");
       if (evt) evt.currentTarget.classList.add("active");
+      
+      // Auto-close the drawer after selecting a module
+      navDrawer.classList.remove('open');
+      navOverlay.classList.remove('open');
     }
-
-    // --- Weather Fetch (With IP Auto-Fallback) ---
-    let weatherString = "Unknown";
     
-    async function fetchWeather(lat, lon) {
-      try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`);
-        const data = await res.json();
-        const temp = Math.round(data.current_weather.temperature);
-        weatherString = `${temp}°F`;
-        document.getElementById('weatherWidget').innerHTML = `<span>🌤️</span> <span class="weather-val">${weatherString}</span>`;
-      } catch(e) { 
-        document.getElementById('weatherWidget').innerHTML = `<span>📍 Weather Offline</span>`; 
-      }
-    }
-
     function initWeather() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -1525,6 +1561,61 @@
     } else {
         // Hide mic if the browser (like an old version of Safari) doesn't support it
         micBtn.style.display = 'none';
+    }
+
+// --- 📅 LOGISTICS ENGINE ---
+    async function loadLogistics() {
+        try {
+            const res = await fetch('/api/logistics');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const calList = document.getElementById('calendar-list');
+            calList.innerHTML = '';
+            
+            if (!data.calendar || data.calendar.length === 0) {
+                calList.innerHTML = '<li style="color: var(--text-tertiary); font-size: 14px;">Schedule clear. No upcoming events.</li>';
+            } else {
+                data.calendar.slice(0, 5).forEach(event => {
+                    const title = event.summary || "Busy";
+                    let timeStr = "All Day";
+                    if (event.start && event.start.dateTime) {
+                        const dateObj = new Date(event.start.dateTime);
+                        timeStr = dateObj.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    }
+                    calList.innerHTML += `
+                    <li class="goal-row" style="padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <div style="font-weight: 700; font-size: 15px;">${title}</div>
+                            <div style="font-family: var(--font-mono); color: var(--accent-blue); font-size: 13px;">${timeStr}</div>
+                        </div>
+                    </li>`;
+                });
+            }
+
+            const classList = document.getElementById('classroom-list');
+            classList.innerHTML = '';
+            
+            if (!data.assignments || data.assignments.length === 0) {
+                classList.innerHTML = '<li style="color: var(--text-tertiary); font-size: 14px;">No active assignments found.</li>';
+            } else {
+                data.assignments.slice(0, 5).forEach(hw => {
+                    let dueStr = "No Due Date";
+                    if (hw.due) dueStr = `Due: ${hw.due.month}/${hw.due.day}/${hw.due.year}`;
+                    
+                    classList.innerHTML += `
+                    <li class="goal-row" style="padding: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                            <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">${hw.title}</div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <div style="font-size: 12px; color: var(--text-tertiary);">${hw.course}</div>
+                                <div style="font-family: var(--font-mono); color: var(--warning); font-size: 12px;">${dueStr}</div>
+                            </div>
+                        </div>
+                    </li>`;
+                });
+            }
+        } catch(e) { console.error("Logistics offline"); }
     }
 
     // --- Init Application ---
