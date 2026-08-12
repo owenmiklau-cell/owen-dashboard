@@ -38,6 +38,12 @@ const tokenSchema = new mongoose.Schema({
 });
 const AuthToken = mongoose.model('AuthToken', tokenSchema);
 
+const logisticsTokenSchema = new mongoose.Schema({
+    identifier: { type: String, default: 'primary_user', unique: true },
+    refreshToken: String
+});
+const LogisticsToken = mongoose.model('LogisticsToken', logisticsTokenSchema);
+
 const portfolioSchema = new mongoose.Schema({
     identifier: { type: String, default: 'primary_user', unique: true },
     holdings: Array,
@@ -122,15 +128,93 @@ async function getValidAccessToken() {
     throw new Error("No authentication credentials found. Please log in.");
 }
 
+// --- 🏫 SCHOOL TOKEN MANAGEMENT ---
+let storedLogisticsToken = null;
+let logisticsTokenExpiresAt = null;
+
+async function getSavedLogisticsRefreshToken() {
+    try {
+        const doc = await LogisticsToken.findOne({ identifier: 'primary_user' });
+        return doc ? doc.refreshToken : null;
+    } catch (err) { return null; }
+}
+
+async function saveLogisticsRefreshToken(token) {
+    try {
+        await LogisticsToken.findOneAndUpdate(
+            { identifier: 'primary_user' },
+            { refreshToken: token },
+            { upsert: true, new: true }
+        );
+    } catch (err) { console.error("Error saving logistics token", err); }
+}
+
+async function getValidLogisticsToken() {
+    if (storedLogisticsToken && logisticsTokenExpiresAt && Date.now() < logisticsTokenExpiresAt - 120000) {
+        return storedLogisticsToken;
+    }
+    const savedRefreshToken = await getSavedLogisticsRefreshToken();
+    if (savedRefreshToken) {
+        try {
+            const response = await axios.post('https://oauth2.googleapis.com/token', {
+                client_id: process.env.FITBIT_CLIENT_ID,
+                client_secret: process.env.FITBIT_CLIENT_SECRET,
+                refresh_token: savedRefreshToken,
+                grant_type: 'refresh_token'
+            });
+            storedLogisticsToken = response.data.access_token;
+            const expiresIn = response.data.expires_in || 3600;
+            logisticsTokenExpiresAt = Date.now() + (expiresIn * 1000);
+            if (response.data.refresh_token) await saveLogisticsRefreshToken(response.data.refresh_token);
+            return storedLogisticsToken;
+        } catch (error) { throw new Error("School token refresh failed."); }
+    }
+    throw new Error("No school credentials found.");
+}
+
 // --- 🔐 AUTHENTICATION ROUTES ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 app.get('/api/fitbit/auth', (req, res) => {
+    // STRICTLY HEALTH SCOPES ONLY
     const rawScopes = "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly";
     const encodedScopes = encodeURIComponent(rawScopes);
-    
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/callback&scope=${encodedScopes}&access_type=offline&prompt=consent`;    
     res.redirect(authUrl);
+});
+
+// NEW: STRICTLY SCHOOL SCOPES
+app.get('/api/logistics/auth', (req, res) => {
+    const rawScopes = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/gmail.readonly";
+    const encodedScopes = encodeURIComponent(rawScopes);
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/logistics/callback&scope=${encodedScopes}&access_type=offline&prompt=consent`;    
+    res.redirect(authUrl);
+});
+
+app.get('/logistics/callback', async (req, res) => {
+    const authCode = req.query.code;
+    if (!authCode) return res.send('Error: No code provided from Google');
+
+    try {
+        const response = await axios.post('https://oauth2.googleapis.com/token', {
+            client_id: process.env.FITBIT_CLIENT_ID,
+            client_secret: process.env.FITBIT_CLIENT_SECRET,
+            code: authCode,
+            grant_type: 'authorization_code',
+            redirect_uri: `${BASE_URL}/logistics/callback`
+        });
+        
+        storedLogisticsToken = response.data.access_token;
+        if (response.data.refresh_token) await saveLogisticsRefreshToken(response.data.refresh_token);
+        
+        const expiresIn = response.data.expires_in || 3600;
+        logisticsTokenExpiresAt = Date.now() + (expiresIn * 1000);
+
+        res.redirect('/dashboard.html?tab=logistics');
+    } catch (error) {
+        console.error("School Auth Error:", error.response?.data || error.message);
+        res.status(500).send("School Authentication failed.");
+    }
 });
 
 app.get('/callback', async (req, res) => {
@@ -298,6 +382,52 @@ app.get('/api/health-data', async (req, res) => {
     } catch (error) {
         console.error("Health API Error:", error.message);
         res.status(500).json({ error: error.message || "Failed to fetch live health data" });
+    }
+});
+
+// --- 📅 CENTRAL NERVOUS SYSTEM (LOGISTICS HUB) ---
+app.get('/api/logistics', async (req, res) => {
+    try {
+        const accessToken = await getValidAccessToken();
+        const headers = { headers: { 'Authorization': `Bearer ${accessToken}` } };
+
+        // 1. Fetch Calendar Events (Next 7 days)
+        const timeMin = new Date().toISOString();
+        const timeMax = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const calReq = axios.get(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, headers);
+
+        // 2. Fetch Active Classroom Courses
+        const coursesReq = axios.get('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE', headers);
+
+        // Execute both calls simultaneously for speed
+        const [calRes, coursesRes] = await Promise.allSettled([calReq, coursesReq]);
+
+        let calendarEvents = calRes.status === 'fulfilled' ? calRes.value.data.items || [] : [];
+        let courses = coursesRes.status === 'fulfilled' ? coursesRes.value.data.courses || [] : [];
+        
+        let assignments = [];
+        // 3. Fetch homework for up to 3 active courses to keep the system lightning fast
+        if (courses.length > 0) {
+            const hwRequests = courses.slice(0, 3).map(c => 
+                axios.get(`https://classroom.googleapis.com/v1/courses/${c.id}/courseWork`, headers)
+            );
+            const hwResponses = await Promise.allSettled(hwRequests);
+            hwResponses.forEach((hwRes, idx) => {
+                if (hwRes.status === 'fulfilled' && hwRes.value.data.courseWork) {
+                    const courseName = courses[idx].name;
+                    hwRes.value.data.courseWork.forEach(work => {
+                        // Only add assignments that haven't been completed yet
+                        assignments.push({ course: courseName, title: work.title, due: work.dueDate });
+                    });
+                }
+            });
+        }
+
+        res.json({ calendar: calendarEvents, assignments });
+
+    } catch (error) {
+        console.error("Logistics API Error:", error.message);
+        res.status(500).json({ error: "Marvin cannot access Google Logistics right now." });
     }
 });
 
