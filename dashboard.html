@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Marvin OS">
   
-  <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=f97316&size=512&bold=true">
-  <link rel="icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=f97316&size=64&bold=true">
+  <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=512&bold=true">
+  <link rel="icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=64&bold=true">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
@@ -65,6 +65,24 @@
 
     .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 24px; }
 
+    /* --- BENTO BOX GRID SYSTEM --- */
+    .bento-grid { 
+        display: grid; 
+        grid-template-columns: 1fr; 
+        gap: 20px; 
+        width: 100%; 
+    }
+    
+    @media (min-width: 800px) {
+        .bento-grid { 
+            grid-template-columns: repeat(2, 1fr); 
+            align-items: stretch; /* Makes side-by-side cards equal height */
+        }
+        .bento-full { grid-column: span 2; }
+        .bento-left { grid-column: 1 / 2; height: 100%; }
+        .bento-right { grid-column: 2 / 3; height: 100%; }
+    }
+
     /* --- Top Navigation & Weather --- */
     .top-header { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 900px; margin-bottom: 20px; }
     .dash-title { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; background: linear-gradient(180deg, #FFFFFF 0%, #A1A1AA 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
@@ -90,7 +108,7 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* --- Premium Frosted Cards --- */
-    .gm-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 16px; padding: 24px; border: 1px solid var(--card-border); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .gm-card { display: flex; flex-direction: column; background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 16px; padding: 24px; border: 1px solid var(--card-border); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     .gm-card:hover { border-color: var(--card-border-hover); transform: translateY(-2px); box-shadow: 0 15px 35px -10px rgba(232, 93, 4, 0.1); }
 
     /* --- "Ghost" Action Buttons (Matte Premium Feel) --- */
@@ -163,7 +181,7 @@
     .section-title::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
     .gm-eyebrow { font-size: 10px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.15em; font-weight: 600; }
     .gm-progress-num { font-size: 42px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 8px 0; }
-    .gm-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .gm-list { list-style: none; display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
     .goal-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid transparent; transition: all 0.2s; }
     .goal-row:hover { background: rgba(255,255,255,0.02); border-color: var(--card-border); }
     .gm-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--text-tertiary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
@@ -177,19 +195,19 @@
     .gm-input-wrap input:focus, textarea:focus { border-color: var(--card-border-hover); background: rgba(0,0,0,0.4); }
 
     /* --- Health Metrics Grid --- */
-    .health-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .health-hero-card { text-align: center; border-top: 3px solid; padding: 24px; }
+    .health-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;}
+    .health-hero-card { text-align: center; border-top: 3px solid; padding: 24px; display: flex; flex-direction: column; justify-content: center;}
     .health-hero-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-tertiary); margin-bottom: 12px; }
     .health-hero-card .val { font-size: 48px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; }
     .health-hero-card .unit { font-size: 20px; font-weight: 600; opacity: 0.7; }
     
-    .health-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 30px; }
-    .health-mini-card { padding: 16px; text-align: center; background: rgba(0,0,0,0.2); }
+    .health-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 30px; width: 100%;}
+    .health-mini-card { padding: 16px; text-align: center; background: rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center;}
     .health-mini-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 8px; }
     .health-mini-card .val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
     .health-mini-card .unit { font-size: 12px; color: var(--text-tertiary); }
     
-    .chart-container { width: 100%; height: 220px; margin-top: 16px; }
+    .chart-container { width: 100%; height: 220px; margin-top: 16px; flex-grow: 1; min-height: 180px;}
 
     /* --- AI Headers & Chat --- */
     .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -255,22 +273,22 @@
   </div>
 
   <div id="Overview" class="tab-content active">
-    <div class="container">
+    <div class="container bento-grid">
       
-      <div class="directive-banner" id="dailyDirectiveBox">
+      <div class="directive-banner bento-full" id="dailyDirectiveBox">
         <div class="directive-label">✨ Morning Briefing</div>
         <div class="directive-text" id="dailyDirectiveText">Syncing biometric data to generate today's tactical protocol...</div>
       </div>
 
-      <div class="goal-ticker" id="goalTicker">
-        <div class="goal-ticker-led"><span class="goal-ticker-led-dot"></span></div>
-        <div class="goal-ticker-label">TARGETS</div>
-        <div class="goal-ticker-stage" id="goalTickerStage"></div>
-        <div class="goal-ticker-meta" id="goalTickerMeta">0/0</div>
-      </div>
+      <div class="gm-card bento-left" style="justify-content: center;">
+        <div class="goal-ticker" id="goalTicker" style="margin-bottom: 24px; width: 100%;">
+            <div class="goal-ticker-led"><span class="goal-ticker-led-dot"></span></div>
+            <div class="goal-ticker-label">TARGETS</div>
+            <div class="goal-ticker-stage" id="goalTickerStage"></div>
+            <div class="goal-ticker-meta" id="goalTickerMeta">0/0</div>
+        </div>
 
-      <div class="gm-card">
-        <div class="day-ring-wrap">
+        <div class="day-ring-wrap" style="padding: 0;">
           <div class="ring-container">
             <svg class="ring-svg" viewBox="0 0 120 120">
               <circle class="ring-track" cx="60" cy="60" r="52"></circle>
@@ -288,31 +306,42 @@
           </div>
         </div>
       </div>
+
+      <div class="gm-card bento-right">
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+             <div class="section-title" style="margin: 0;">Consistency</div>
+             <select id="chart-timeframe" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer;">
+                 <option value="7">7 Days</option>
+                 <option value="30" selected>30 Days</option>
+                 <option value="90">90 Days</option>
+                 <option value="0">All Time</option>
+             </select>
+         </div>
+         <div class="chart-container" style="flex-grow: 1; margin: 0; min-height: 180px;">
+           <canvas id="habitChart"></canvas>
+         </div>
+      </div>
           
-      <div class="section-title">Execution</div>
-      <div class="gm-card" id="cardToday">
-        <div style="display: flex; justify-content: space-between;">
+      <div class="gm-card bento-left" id="cardToday">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
           <div>
-            <div class="gm-eyebrow" id="todayLabel">Today</div>
-            <div class="gm-progress-num"><span id="gmProgressNum">0</span><span style="color: var(--text-tertiary); font-size: 24px;" id="gmProgressTotal">/ 0</span></div>
+            <div class="gm-eyebrow" id="todayLabel">Execution</div>
+            <div class="gm-progress-num" style="margin-bottom: 0;"><span id="gmProgressNum">0</span><span style="color: var(--text-tertiary); font-size: 24px;" id="gmProgressTotal">/ 0</span></div>
           </div>
         </div>
-        <ul class="gm-list" id="goalListToday" style="margin-top: 16px;"></ul>
+        <ul class="gm-list" id="goalListToday"></ul>
         <div class="gm-input-wrap">
           <input type="text" id="goalInput" placeholder="Add a target for today...">
-          <button class="gm-polish-btn" id="goalPolishBtn">✨ Polish</button>
           <button class="gm-add-btn" id="goalAddBtn">Add</button>
         </div>
       </div>
 
-      <div class="section-title">Preparation</div>
-      <div class="gm-card" id="cardTomorrow">
-        <div class="gm-eyebrow" id="tomorrowLabel">Tomorrow</div>
-        <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: 16px;">Set your targets tonight. Activates at 6:00 AM.</p>
+      <div class="gm-card bento-right" id="cardTomorrow">
+        <div class="gm-eyebrow" id="tomorrowLabel" style="margin-bottom: 8px;">Preparation</div>
+        <p style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px;">Set your targets tonight. Activates at 6:00 AM.</p>
         <ul class="gm-list" id="goalListTomorrow"></ul>
         <div class="gm-input-wrap">
           <input type="text" id="tomorrowInput" placeholder="Plan tomorrow's objective...">
-          <button class="gm-polish-btn" id="tomorrowPolishBtn">📋 Optimize</button>
           <button class="gm-add-btn" id="tomorrowAddBtn">Plan</button>
         </div>
       </div>
@@ -321,14 +350,14 @@
   </div> 
 
   <div id="Health" class="tab-content">
-    <div class="container">
+    <div class="container bento-grid">
       
-      <div id="health-auth-view" class="auth-banner">
+      <div id="health-auth-view" class="auth-banner bento-full">
         <span>Connect Google Health to sync live biometrics.</span>
         <a href="/api/fitbit/auth">Sync Account</a>
       </div>
 
-      <div id="health-data-view" style="display: none;">
+      <div id="health-data-view" class="bento-full" style="display: none; width: 100%;">
         
         <div class="health-hero-grid">
           <div class="gm-card health-hero-card" style="border-top-color: var(--accent-purple);">
@@ -349,7 +378,7 @@
         </div>
 
         <div class="section-title">Subjective State</div>
-        <div class="gm-card" style="margin-bottom: 30px;">
+        <div class="gm-card" style="margin-bottom: 30px; width: 100%;">
           <div class="slider-grid">
             <div class="slider-row">
               <div class="slider-header"><span>Muscle Soreness</span> <span class="slider-val" id="val-sore">1</span></div>
@@ -399,16 +428,16 @@
         </div>
 
         <div class="section-title">7-Day Trends</div>
-        <div class="gm-card">
+        <div class="gm-card" style="width: 100%;">
            <div class="chart-container">
              <canvas id="trendChart"></canvas>
            </div>
         </div>
 
-        <div class="gm-card" style="margin-top: 24px;">
+        <div class="gm-card" style="margin-top: 24px; width: 100%;">
           <div class="ai-header">
             <h3><span style="font-size: 24px;">✨</span> Marvin (Physiology)</h3>
-            <button id="btn-ask-coach" class="gm-add-btn" style="background: var(--accent-purple); color: #fff;">Analyze Protocol</button>
+            <button id="btn-ask-coach" class="gm-add-btn">Analyze Protocol</button>
           </div>
           <div id="ai-response" class="ai-response-box">
             Sync your health data and click analyze to generate your custom elite athlete protocol for today.
@@ -420,14 +449,14 @@
   </div> 
 
 <div id="Portfolio" class="tab-content">
-    <div class="container">
+    <div class="container bento-grid">
       
-      <div class="gm-card">
+      <div class="gm-card bento-left">
         <div class="section-title">Data Ingestion</div>
         <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
           Export your portfolio from Fidelity <strong>(Accounts & Trade > Positions > Download icon)</strong> and upload the .csv file here.
         </p>
-        <input type="file" id="csvFileInput" accept=".csv" style="color: var(--text-primary); margin-bottom: 24px;">
+        <input type="file" id="csvFileInput" accept=".csv" style="color: var(--text-primary); margin-bottom: 24px; width: 100%;">
         
         <div class="section-title">Total Portfolio Value</div>
         <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px;">
@@ -441,18 +470,18 @@
         </ul>
       </div>
 
-      <div class="gm-card">
+      <div class="gm-card bento-right">
         <div class="ai-header">
           <h3><span style="font-size: 24px;">📈</span> Marvin (Quant)</h3>
         </div>
         
-        <div class="chat-history" id="portfolio-chat-history" style="height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-             <div class="chat-msg ai" style="background: rgba(0,0,0,0.4); padding: 12px 16px; border-radius: 12px; border-left: 2px solid var(--accent-green); align-self: flex-start;">Upload your CSV, then ask me to scan your holdings for market opportunities.</div>
+        <div class="chat-history" id="portfolio-chat-history" style="height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; flex-grow: 1;">
+             <div class="chat-msg ai">Upload your CSV, then ask me to scan your holdings for market opportunities.</div>
         </div>
         
         <div class="gm-input-wrap" style="margin-top: 0;">
           <input type="text" id="portfolio-chat-input" placeholder="Ask your Quant Analyst about specific moves...">
-          <button class="gm-add-btn" id="btn-portfolio-chat" style="background: var(--accent-green); color: #000;">Send</button>
+          <button class="gm-add-btn" id="btn-portfolio-chat">Send</button>
         </div>
       </div>
 
@@ -460,12 +489,12 @@
   </div>
 
 <div id="Mindset" class="tab-content">
-    <div class="container">
+    <div class="container bento-grid">
       
-      <div class="gm-card">
+      <div class="gm-card bento-left">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div><div class="section-title" style="margin: 0;">Core Habits</div></div>
-            <button id="btn-edit-habits" style="background: transparent; color: var(--accent-purple); border: none; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;">⚙ Edit</button>
+            <button id="btn-edit-habits" style="background: transparent; color: var(--accent-orange); border: none; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;">⚙ Edit</button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="habit-container">
             <div style="color: var(--text-tertiary); font-size: 14px;">Loading habits...</div>
@@ -473,66 +502,57 @@
         <div id="habit-edit-ui" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--card-border);">
             <div class="gm-input-wrap" style="margin-top: 0;">
                 <input type="text" id="new-habit-input" placeholder="Add a new daily habit...">
-                <button class="gm-add-btn" id="btn-add-habit" style="background: var(--accent-purple); color: #fff;">Add</button>
+                <button class="gm-add-btn" id="btn-add-habit">Add</button>
             </div>
             <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px;">Click the red 'X' on a habit above to delete it.</p>
         </div>
       </div>
 
-      <div class="gm-card">
-         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-             <div class="section-title" style="margin: 0;">Habit Consistency</div>
-             <select id="chart-timeframe" style="background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
-                 <option value="7">7 Days</option><option value="30" selected>30 Days</option>
-                 <option value="90">90 Days</option><option value="0">All Time</option>
-             </select>
-         </div>
-         <div class="chart-container"><canvas id="habitChart"></canvas></div>
-      </div>
-
-      <div class="gm-card">
+      <div class="gm-card bento-right">
         <div class="section-title">Tactical Reflection</div>
-        <textarea id="journal-input" placeholder="Brain-dump your focus for today, or reflect on a recent practice/game. What went well? Where did you lose focus?" style="width: 100%; height: 150px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; color: var(--text-primary); font-family: var(--font-body); font-size: 15px; outline: none; resize: none; margin-bottom: 16px;"></textarea>
+        <textarea id="journal-input" placeholder="Brain-dump your focus for today, or reflect on a recent practice/game. What went well? Where did you lose focus?" style="width: 100%; height: 150px; flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; color: var(--text-primary); font-family: var(--font-body); font-size: 15px; outline: none; resize: none; margin-bottom: 16px;"></textarea>
         
         <div style="display: flex; gap: 12px;">
-            <button class="gm-add-btn" id="btn-save-journal" style="flex: 1; background: var(--text-primary); color: #000;">💾 Save Log</button>
-            <button class="gm-add-btn" id="btn-analyze-mindset" style="flex: 1; background: var(--accent-purple); color: #fff;">🧠 Marvin (Psychology)</button>
+            <button class="gm-add-btn" id="btn-save-journal" style="flex: 1;">💾 Save Log</button>
+            <button class="gm-add-btn" id="btn-analyze-mindset" style="flex: 1;">🧠 Marvin (Psychology)</button>
         </div>
       </div>
 
-      <div class="gm-card" id="mindset-ai-card" style="display: none;">
+      <div class="gm-card bento-full" id="mindset-ai-card" style="display: none;">
         <div class="ai-header">
           <h3><span style="font-size: 24px;">🧠</span> Marvin (Psychology)</h3>
         </div>
         <div id="mindset-ai-response" class="ai-response-box">Analyzing mindset...</div>
       </div>
 
-      <div class="section-title" style="margin-top: 12px;">The Cognitive Vault</div>
-      <div class="gm-card" id="journal-vault" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-         <div style="color: var(--text-tertiary); font-size: 14px;">Loading archives...</div>
+      <div class="bento-full">
+          <div class="section-title" style="margin-top: 12px;">The Cognitive Vault</div>
+          <div class="gm-card" id="journal-vault" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+             <div style="color: var(--text-tertiary); font-size: 14px;">Loading archives...</div>
+          </div>
       </div>
 
     </div>
 </div>
 
 <div id="Logistics" class="tab-content">
-    <div class="container">
+    <div class="container bento-grid">
       
-      <div id="logistics-auth-view" class="auth-banner" style="display: flex;">
+      <div id="logistics-auth-view" class="auth-banner bento-full" style="display: flex;">
         <span>Connect your School Google Account to sync agenda.</span>
-        <a href="/api/logistics/auth" style="background: var(--accent-purple);">Sync School</a>
+        <a href="/api/logistics/auth">Sync School</a>
       </div>
 
-      <div id="logistics-data-view" style="display: none;">
-          <div class="section-title">Schedule Uplink</div>
-          <div class="gm-card">
+      <div id="logistics-data-view" class="bento-full bento-grid" style="display: none;">
+          <div class="gm-card bento-left">
+             <div class="section-title">Schedule Uplink</div>
              <ul class="gm-list" id="calendar-list">
                 <li style="color: var(--text-tertiary); font-size: 14px;">Syncing agenda...</li>
              </ul>
           </div>
     
-          <div class="section-title" style="margin-top: 12px;">Academic Directives</div>
-          <div class="gm-card">
+          <div class="gm-card bento-right">
+             <div class="section-title">Academic Directives</div>
              <ul class="gm-list" id="classroom-list">
                 <li style="color: var(--text-tertiary); font-size: 14px;">Syncing coursework...</li>
              </ul>
@@ -554,9 +574,9 @@
           <div class="chat-msg ai">How can I help you optimize your day?</div>
       </div>
       <div class="chat-input-area">
-          <button id="btn-mic-chat" style="background: transparent; border: 1px solid var(--card-border); color: #fff; border-radius: 10px; width: 44px; font-size: 16px; cursor: pointer; transition: 0.2s;">🎙️</button>
+          <button id="btn-mic-chat" style="background: transparent; border: 1px solid var(--card-border); color: #fff; border-radius: 10px; width: 44px; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">🎙️</button>
           <input type="text" id="chat-input" placeholder="Talk to Marvin...">
-          <button id="btn-send-chat">Send</button>
+          <button id="btn-send-chat" class="gm-add-btn">Send</button>
       </div>
     </div>
   </div>
@@ -625,6 +645,19 @@
       }
     }
 
+    let weatherString = "Unknown";
+    async function fetchWeather(lat, lon) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`);
+        const data = await res.json();
+        const temp = Math.round(data.current_weather.temperature);
+        weatherString = `${temp}°F`;
+        document.getElementById('weatherWidget').innerHTML = `<span>🌤️</span> <span class="weather-val">${weatherString}</span>`;
+      } catch(e) { 
+        document.getElementById('weatherWidget').innerHTML = `<span>📍 Weather Offline</span>`; 
+      }
+    }
+
    // --- Subjective State Logic ---
     function loadSubjective() {
       const savedDate = localStorage.getItem('subjectiveStateDate');
@@ -636,12 +669,13 @@
         // If they already submitted today, load their saved numbers and lock the button visually
         state = JSON.parse(localStorage.getItem('subjectiveState')) || { sore: 1, energy: 10, motivate: 10 };
         btn.innerText = "✓ Logged for Today";
-        btn.style.background = "var(--accent-green)";
+        btn.style.background = "var(--accent-green) !important";
+        btn.style.color = "#000 !important";
       } else {
         // If it's a new day, reset the sliders to default so they don't look at stale data
         state = { sore: 1, energy: 10, motivate: 10 };
         btn.innerText = "Submit Log";
-        btn.style.background = "var(--accent-purple)";
+        btn.style.background = "var(--accent-orange-dim) !important";
       }
       
       document.getElementById('slide-sore').value = state.sore; document.getElementById('val-sore').innerText = state.sore;
@@ -673,7 +707,8 @@
       
       const btn = document.getElementById('saveSubjectiveBtn');
       btn.innerText = "✓ Logged for Today";
-      btn.style.background = "var(--accent-green)";
+      btn.style.background = "var(--accent-green) !important";
+      btn.style.color = "#000 !important";
     }
     // --- Core Logic Config ---
     const WAKE_HOUR = 8;
@@ -865,7 +900,7 @@
           data: {
             labels: labels.length > 0 ? labels : ['No Data Yet'],
             datasets: [
-              { label: 'Health Score', data: scoreData, borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.1)', tension: 0.4, fill: true },
+              { label: 'Health Score', data: scoreData, borderColor: '#e85d04', backgroundColor: 'rgba(232, 93, 4, 0.1)', tension: 0.4, fill: true },
               { label: 'Recovery %', data: recData, borderColor: '#10B981', borderDash: [5, 5], tension: 0.4, fill: false }
             ]
           },
@@ -895,7 +930,7 @@
         const data = await response.json();
         if (data) {
           document.getElementById('health-auth-view').style.display = 'none';
-          document.getElementById('health-data-view').style.display = 'block';
+          document.getElementById('health-data-view').style.display = 'flex';
           
           document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
           document.getElementById('tab-recovery').innerText = data.recovery || '--';
@@ -979,20 +1014,6 @@
           localStorage.setItem('dailyDirectiveHTML', reply);
       }
     }
-
-    document.getElementById('goalPolishBtn').addEventListener('click', async () => {
-      const inputElement = document.getElementById('goalInput'); 
-      if (!inputElement.value.trim()) return;
-      const original = inputElement.value; inputElement.value = "✨ Polishing..."; 
-      inputElement.value = (await callGemini('polish_text', original)).replace(/\*\*/g, '');
-    });
-    
-    document.getElementById('tomorrowPolishBtn').addEventListener('click', async () => {
-      const planElement = document.getElementById('tomorrowInput'); 
-      if (!planElement.value.trim()) return;
-      const original = planElement.value; planElement.value = "📋 Optimizing..."; 
-      planElement.value = (await callGemini('polish_plan', original)).replace(/\*\*/g, '');
-    });
 
     const bottomBar = document.getElementById('ai-bottom-bar');
     const headerToggle = document.getElementById('chat-header-toggle');
@@ -1331,14 +1352,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ date: today, habits, reflection })
             });
-            btn.style.background = "var(--accent-green)";
+            btn.style.background = "var(--accent-green) !important";
+            btn.style.color = "#000 !important";
             btn.innerText = "✓ Saved!";
             renderHabitChart(); 
             loadVault(); 
         } catch (err) { btn.innerText = "Error"; }
         
         setTimeout(() => {
-            btn.style.background = "var(--text-primary)";
+            btn.style.background = "var(--accent-orange-dim) !important";
+            btn.style.color = "var(--accent-orange) !important";
             btn.innerText = originalText;
         }, 2000);
     }
@@ -1411,7 +1434,7 @@
                     datasets: [{
                         label: 'Habits Completed',
                         data: dataPoints.length > 0 ? dataPoints : [0],
-                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                        backgroundColor: 'rgba(232, 93, 4, 0.8)',
                         borderRadius: 4
                     }]
                 },
@@ -1427,6 +1450,7 @@
         } catch (err) { console.error("Chart Failed", err); }
     }
 
+    // --- COGNITIVE VAULT ENGINE ---
     async function loadVault() {
         try {
             const res = await fetch('/api/journal/history?days=0');
@@ -1454,122 +1478,13 @@
                 vault.innerHTML += `
                 <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); padding: 16px; border-radius: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; color: var(--accent-purple); font-size: 15px;">${title}</div>
+                        <div style="font-weight: 700; color: var(--accent-orange); font-size: 15px;">${title}</div>
                         <div style="font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono);">${dateStr}</div>
                     </div>
                     <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;">${ref}</div>
                 </div>`;
             });
         } catch(e) { console.error("Vault offline"); }
-    }
-    
-    // --- COGNITIVE VAULT ENGINE ---
-    async function loadVault() {
-        try {
-            const res = await fetch('/api/journal/history?days=0');
-            const history = await res.json();
-            
-            const vault = document.getElementById('journal-vault');
-            vault.innerHTML = '';
-            
-            if (history.length === 0) {
-                vault.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px;">Vault is empty. Log your first entry above.</div>';
-                return;
-            }
-
-            history.forEach(log => {
-                const title = log.title || "Daily Tactical Log";
-                const ref = log.reflection || "No reflection logged.";
-                
-                const [y, m, d] = log.date.split('-');
-                const dateObj = new Date(y, m - 1, d);
-                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
-                vault.innerHTML += `
-                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); padding: 16px; border-radius: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; color: var(--accent-purple); font-size: 15px;">${title}</div>
-                        <div style="font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono);">${dateStr}</div>
-                    </div>
-                    <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;">${ref}</div>
-                </div>`;
-            });
-        } catch(e) { console.error("Vault offline"); }
-    }
-
-    document.getElementById('btn-add-habit').addEventListener('click', async () => {
-        const input = document.getElementById('new-habit-input');
-        const text = input.value.trim();
-        if (!text) return;
-        
-        masterHabitList.push(text);
-        input.value = '';
-        renderHabitUI();
-        
-        await fetch('/api/habits/master', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ habitList: masterHabitList })
-        });
-        loadJournal(); 
-    });
-
-    async function deleteHabit(index) {
-        masterHabitList.splice(index, 1);
-        renderHabitUI();
-        await fetch('/api/habits/master', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ habitList: masterHabitList })
-        });
-        loadJournal();
-    }
-
-    async function renderHabitChart() {
-        try {
-            const timeframe = document.getElementById('chart-timeframe').value;
-            const res = await fetch(`/api/journal/history?days=${timeframe}`);
-            const history = await res.json();
-            
-            const labels = history.map(day => day.date.slice(5)); 
-            const dataPoints = history.map(day => {
-                let count = 0;
-                for (let key in day.habits) { if (day.habits[key] === true) count++; }
-                return count;
-            });
-
-            const ctx = document.getElementById('habitChart').getContext('2d');
-            if (window.myHabitChart) window.myHabitChart.destroy();
-
-            window.myHabitChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels.length > 0 ? labels : [getActiveDateString().slice(5)],
-                    datasets: [{
-                        label: 'Habits Completed',
-                        data: dataPoints.length > 0 ? dataPoints : [0],
-                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            suggestedMax: masterHabitList.length || 4, 
-                            grid: { color: 'rgba(255,255,255,0.05)' }, 
-                            ticks: { color: '#71717A', stepSize: 1 } 
-                        },
-                        x: { 
-                            grid: { display: false }, 
-                            ticks: { color: '#71717A', maxTicksLimit: 14 } 
-                        }
-                    }
-                }
-            });
-        } catch (err) { console.error("Chart Failed", err); }
     }
 
     // --- 🎙️ MARVIN VOICE RECOGNITION UPLINK ---
@@ -1610,7 +1525,7 @@
             document.getElementById('chat-input').placeholder = "Mic error or denied...";
         };
     } else {
-        // Hide mic if the browser (like an old version of Safari) doesn't support it
+        // Hide mic if the browser doesn't support it
         micBtn.style.display = 'none';
     }
 
@@ -1628,7 +1543,7 @@
             
             // Otherwise, show the data
             document.getElementById('logistics-auth-view').style.display = 'none';
-            document.getElementById('logistics-data-view').style.display = 'block';
+            document.getElementById('logistics-data-view').style.display = 'grid';
             
             const data = await res.json();
             
@@ -1689,6 +1604,10 @@
           openTab(null, 'Logistics');
           window.history.replaceState({}, document.title, window.location.pathname);
       }
+      if (urlParams.get('tab') === 'health') {
+          openTab(null, 'Health');
+          window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
       initWeather();
       loadSubjective();
@@ -1702,6 +1621,7 @@
       initHealthTab();
       loadSavedPortfolio();
       loadJournal();
+      loadLogistics();
       
       // Event Listeners
       document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
@@ -1739,7 +1659,7 @@
       ptrEl.innerHTML = "↓ Pull to refresh";
       Object.assign(ptrEl.style, {
           position: 'absolute', top: '-50px', left: '0', width: '100%', textAlign: 'center',
-          color: 'var(--accent-purple)', fontSize: '11px', fontWeight: '700', 
+          color: 'var(--accent-orange)', fontSize: '11px', fontWeight: '700', 
           letterSpacing: '0.2em', textTransform: 'uppercase', transition: 'top 0.2s', zIndex: '1000'
       });
       document.body.prepend(ptrEl);
