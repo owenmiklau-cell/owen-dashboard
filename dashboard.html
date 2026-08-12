@@ -14,10 +14,10 @@
 <style>
     :root {
       /* --- PREMIUM MATTE GRAPHITE & BURNT ORANGE PALETTE --- */
-      --bg-dark: #0c0c0e;
-      --card-bg: rgba(20, 20, 23, 0.7);
-      --card-border: rgba(255, 255, 255, 0.06);
-      --card-border-hover: rgba(232, 93, 4, 0.3);
+      --bg-dark: #09090b;
+      --card-bg: rgba(20, 20, 24, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(232, 93, 4, 0.35);
       
       --text-primary: #f4f4f5;
       --text-secondary: #a1a1aa;
@@ -27,10 +27,7 @@
       --accent-orange: #e85d04; 
       --accent-orange-dim: rgba(232, 93, 4, 0.12);
       
-      /* Universally mapping old variables to the new matte aesthetic */
-      --accent-purple: #e85d04; 
-      
-      /* Semantic Data Colors (Slightly muted to match the matte vibe) */
+      /* Semantic Data Colors */
       --accent-blue: #3b82f6;
       --accent-green: #10b981;
       --warning: #d97706;
@@ -47,14 +44,14 @@
       color: var(--text-primary);
       font-family: var(--font-body);
       min-height: 100vh;
-      padding: 40px 20px 80px;
+      padding: 40px 20px 100px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      /* Refined, softer radial grid background */
-      background-image: radial-gradient(rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
       background-size: 8px 8px;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     /* Minimalist Scrollbar */
@@ -65,7 +62,7 @@
 
     .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 24px; }
 
-    /* --- BENTO BOX GRID SYSTEM --- */
+    /* --- BENTO BOX GRID SYSTEM (Mobile First) --- */
     .bento-grid { 
         display: grid; 
         grid-template-columns: 1fr; 
@@ -73,34 +70,30 @@
         width: 100%; 
     }
     
+    /* Desktop Bento Grid */
     @media (min-width: 800px) {
-        .bento-grid { 
-            grid-template-columns: repeat(2, 1fr); 
-            align-items: stretch; /* Makes side-by-side cards equal height */
-        }
+        .bento-grid { grid-template-columns: repeat(2, 1fr); align-items: stretch; }
         .bento-full { grid-column: span 2; }
-        .bento-left { grid-column: 1 / 2; height: 100%; }
-        .bento-right { grid-column: 2 / 3; height: 100%; }
+        .bento-left { grid-column: 1 / 2; }
+        .bento-right { grid-column: 2 / 3; }
     }
 
     /* --- Top Navigation & Weather --- */
     .top-header { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 900px; margin-bottom: 20px; }
-    .dash-title { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; background: linear-gradient(180deg, #FFFFFF 0%, #A1A1AA 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .weather-widget { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 20px; border: 1px solid var(--card-border); font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); backdrop-filter: blur(10px); }
+    .dash-title { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; color: var(--text-primary); }
+    .weather-widget { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid var(--card-border); font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); backdrop-filter: blur(10px); }
     .weather-val { color: var(--text-primary); font-weight: 600; font-size: 13px; }
 
-    /* --- Sliding Navigation Drawer (Glassmorphism) --- */
+    /* --- Sliding Navigation Drawer --- */
     .menu-btn { background: transparent; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 8px; border-radius: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; }
     .menu-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: var(--card-border); }
-    .nav-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 1999; opacity: 0; pointer-events: none; transition: 0.4s ease; }
+    .nav-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1999; opacity: 0; pointer-events: none; transition: 0.4s ease; }
     .nav-overlay.open { opacity: 1; pointer-events: auto; }
-    .nav-drawer { position: fixed; top: 0; left: -300px; width: 300px; height: 100vh; background: rgba(12, 12, 14, 0.85); border-right: 1px solid var(--card-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); z-index: 2000; transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 60px 24px 24px; display: flex; flex-direction: column; gap: 6px; box-shadow: 10px 0 40px rgba(0,0,0,0.5); }
+    .nav-drawer { position: fixed; top: 0; left: -300px; width: 300px; height: 100vh; background: rgba(10, 10, 12, 0.95); border-right: 1px solid var(--card-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); z-index: 2000; transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 60px 24px 24px; display: flex; flex-direction: column; gap: 6px; box-shadow: 10px 0 40px rgba(0,0,0,0.8); }
     .nav-drawer.open { left: 0; }
     .drawer-header { font-size: 10px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 16px; padding-left: 12px; }
     .drawer-link { display: flex; align-items: center; gap: 14px; background: transparent; border: none; color: var(--text-secondary); padding: 14px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 10px; transition: all 0.2s ease; text-align: left; width: 100%; border-left: 3px solid transparent; }
     .drawer-link:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
-    
-    /* Sleek Active State for Drawer */
     .drawer-link.active { background: linear-gradient(90deg, var(--accent-orange-dim) 0%, transparent 100%); color: var(--accent-orange); border-left: 3px solid var(--accent-orange); font-weight: 600; }
     
     .tab-content { display: none; width: 100%; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -108,41 +101,41 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* --- Premium Frosted Cards --- */
-    .gm-card { display: flex; flex-direction: column; background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 16px; padding: 24px; border: 1px solid var(--card-border); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-    .gm-card:hover { border-color: var(--card-border-hover); transform: translateY(-2px); box-shadow: 0 15px 35px -10px rgba(232, 93, 4, 0.1); }
+    .gm-card { display: flex; flex-direction: column; background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 16px; padding: 24px; border: 1px solid var(--card-border); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); height: 100%; }
+    .gm-card:hover { border-color: var(--card-border-hover); box-shadow: 0 15px 35px -10px rgba(232, 93, 4, 0.15); }
 
-    /* --- "Ghost" Action Buttons (Matte Premium Feel) --- */
-    .gm-add-btn, .auth-banner a, .chat-input-area button { 
-        background: var(--accent-orange-dim) !important; 
-        color: var(--accent-orange) !important; 
-        font-weight: 600 !important; 
-        border: 1px solid var(--accent-orange) !important; 
-        padding: 10px 20px; 
-        border-radius: 10px; 
-        cursor: pointer; 
-        transition: all 0.2s ease !important; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        text-decoration: none; 
-        font-size: 13px;
-    }
-    .gm-add-btn:hover, .auth-banner a:hover, .chat-input-area button:hover { 
-        background: var(--accent-orange) !important; 
-        color: #000 !important; 
-        box-shadow: 0 4px 15px rgba(232, 93, 4, 0.2) !important; 
-    }
-    .gm-polish-btn { background: transparent; color: var(--text-secondary); border: 1px solid var(--card-border); padding: 0 16px; border-radius: 10px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 13px; }
-    .gm-polish-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: var(--text-tertiary); }
+    /* --- Ghost Action Buttons --- */
+    .gm-add-btn, .auth-banner a, .chat-input-area button { background: var(--accent-orange-dim); color: var(--accent-orange); font-weight: 600; border: 1px solid var(--accent-orange); padding: 12px 20px; border-radius: 10px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; font-family: var(--font-body); }
+    .gm-add-btn:hover, .auth-banner a:hover, .chat-input-area button:hover { background: var(--accent-orange); color: #000; box-shadow: 0 4px 15px rgba(232, 93, 4, 0.3); }
 
-    /* --- Daily Directive --- */
-    .directive-banner { background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); padding: 20px 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
+    /* --- Core Data Elements --- */
+    .section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-tertiary); display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+    
+    .gm-eyebrow { font-size: 10px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.15em; font-weight: 600; }
+    .gm-progress-num { font-size: 42px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 8px 0; }
+    
+    .gm-list { list-style: none; display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+    .goal-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid transparent; transition: all 0.2s; }
+    .goal-row:hover { background: rgba(255,255,255,0.03); border-color: var(--card-border); }
+    .goal-text { flex: 1; font-size: 14px; font-weight: 500; outline: none; transition: 0.2s; color: var(--text-primary); }
+    .goal-row.is-done .goal-text { text-decoration: line-through; color: var(--text-tertiary); }
+    
+    .gm-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--text-tertiary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .gm-checkbox.checked { background: var(--accent-orange); border-color: var(--accent-orange); }
+    .gm-checkbox.checked::after { content: '✓'; color: #000; font-weight: 800; font-size: 13px; }
+    
+    .gm-input-wrap { display: flex; gap: 10px; margin-top: 20px; width: 100%; }
+    .gm-input-wrap input, textarea { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 16px; color: var(--text-primary); font-size: 14px; font-family: var(--font-body); outline: none; transition: 0.2s; width: 100%; }
+    .gm-input-wrap input:focus, textarea:focus { border-color: var(--accent-orange); background: rgba(0,0,0,0.5); }
+
+    /* --- Command Center Modules --- */
+    .directive-banner { background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); padding: 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
     .directive-banner::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--accent-orange); }
     .directive-label { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-tertiary); display: flex; align-items: center; gap: 8px; }
     .directive-text { font-size: 15px; color: var(--text-primary); line-height: 1.6; font-weight: 400; }
 
-    /* --- Goal Ticker & Lists --- */
-    .goal-ticker { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); }
+    .goal-ticker { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); }
     .goal-ticker-led-dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange); animation: pulse 2.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     .goal-ticker-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-tertiary); }
@@ -152,101 +145,78 @@
     .is-entering { opacity: 1; transform: translateY(0); }
     .goal-ticker-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
 
-    /* --- Subjective Sliders (Refined) --- */
-    .slider-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 16px; }
+    .day-ring-wrap { display: flex; align-items: center; justify-content: center; gap: 30px; padding: 10px 0; }
+    .ring-container { position: relative; width: 140px; height: 140px; }
+    .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .ring-track { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 6; }
+    .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1), stroke 1s ease; }
+    .ring-center-content { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .ring-percent { font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+    .ring-phase { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-tertiary); margin-top: 8px; }
+    .ring-details { display: flex; flex-direction: column; gap: 6px; }
+    .ring-status-line { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .ring-remaining { font-family: var(--font-mono); font-size: 12px; color: var(--accent-orange); }
+
+    /* --- Health Metrics --- */
+    .health-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; width: 100%; }
+    .health-hero-card { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-top: 3px solid; padding: 24px; border-radius: 12px; text-align: center; }
+    .health-hero-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-tertiary); margin-bottom: 12px; }
+    .health-hero-card .val { font-size: 42px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; }
+    .health-hero-card .unit { font-size: 18px; font-weight: 600; opacity: 0.7; }
+    
+    .health-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; width: 100%; flex-grow: 1; align-items: start; }
+    .health-mini-card { padding: 16px; text-align: center; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--card-border); }
+    .health-mini-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 8px; }
+    .health-mini-card .val { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .health-mini-card .unit { font-size: 11px; color: var(--text-tertiary); }
+    
+    .slider-grid { display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; }
     .slider-row { display: flex; flex-direction: column; gap: 10px; }
     .slider-header { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); font-weight: 500; }
     .slider-val { color: var(--accent-orange); font-family: var(--font-mono); font-weight: 600; }
     input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--accent-orange); cursor: pointer; margin-top: -5px; transition: 0.2s; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--accent-orange); cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px var(--accent-orange-glow); transition: 0.2s; }
     input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.05); border-radius: 2px; }
-    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.08); border-radius: 2px; }
 
-    /* --- Day Ring --- */
-    .day-ring-wrap { display: flex; align-items: center; justify-content: center; gap: 40px; padding: 10px 0; }
-    .ring-container { position: relative; width: 160px; height: 160px; }
-    .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
-    .ring-track { fill: none; stroke: rgba(255,255,255,0.03); stroke-width: 6; }
-    .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1), stroke 1s ease; }
-    .ring-center-content { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .ring-percent { font-size: 36px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
-    .ring-phase { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; color: var(--text-tertiary); margin-top: 8px; }
-    .ring-details { display: flex; flex-direction: column; gap: 6px; }
-    .ring-status-line { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-    .ring-remaining { font-family: var(--font-mono); font-size: 12px; color: var(--accent-orange); }
+    .chart-container { position: relative; width: 100%; height: 100%; min-height: 200px; flex-grow: 1; }
 
-    /* --- Sections & Lists --- */
-    .section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-tertiary); display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
-    .gm-eyebrow { font-size: 10px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.15em; font-weight: 600; }
-    .gm-progress-num { font-size: 42px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 8px 0; }
-    .gm-list { list-style: none; display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
-    .goal-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid transparent; transition: all 0.2s; }
-    .goal-row:hover { background: rgba(255,255,255,0.02); border-color: var(--card-border); }
-    .gm-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--text-tertiary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-    .gm-checkbox.checked { background: var(--accent-orange); border-color: var(--accent-orange); }
-    .gm-checkbox.checked::after { content: '✓'; color: #000; font-weight: 800; font-size: 13px; }
-    .goal-text { flex: 1; font-size: 14px; font-weight: 500; outline: none; transition: 0.2s; }
-    .goal-row.is-done .goal-text { text-decoration: line-through; color: var(--text-tertiary); }
-    
-    .gm-input-wrap { display: flex; gap: 10px; margin-top: 20px; }
-    .gm-input-wrap input, textarea { flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 16px; color: var(--text-primary); font-size: 14px; font-family: var(--font-body); outline: none; transition: 0.2s; }
-    .gm-input-wrap input:focus, textarea:focus { border-color: var(--card-border-hover); background: rgba(0,0,0,0.4); }
-
-    /* --- Health Metrics Grid --- */
-    .health-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;}
-    .health-hero-card { text-align: center; border-top: 3px solid; padding: 24px; display: flex; flex-direction: column; justify-content: center;}
-    .health-hero-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-tertiary); margin-bottom: 12px; }
-    .health-hero-card .val { font-size: 48px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; margin-bottom: 8px; }
-    .health-hero-card .unit { font-size: 20px; font-weight: 600; opacity: 0.7; }
-    
-    .health-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 30px; width: 100%;}
-    .health-mini-card { padding: 16px; text-align: center; background: rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: center;}
-    .health-mini-card h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); margin-bottom: 8px; }
-    .health-mini-card .val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
-    .health-mini-card .unit { font-size: 12px; color: var(--text-tertiary); }
-    
-    .chart-container { width: 100%; height: 220px; margin-top: 16px; flex-grow: 1; min-height: 180px;}
-
-    /* --- AI Headers & Chat --- */
-    .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    /* --- AI Components --- */
+    .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .ai-header h3 { color: var(--text-primary); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
-    .ai-response-box { background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-left: 2px solid var(--accent-orange); padding: 20px; border-radius: 12px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
-    
-    .auth-banner { background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .auth-banner span { font-size: 13px; color: var(--text-secondary); }
+    .ai-response-box { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-left: 2px solid var(--accent-orange); padding: 16px; border-radius: 12px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; white-space: pre-wrap; flex-grow: 1; }
+    .auth-banner { background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); padding: 20px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .auth-banner span { font-size: 14px; color: var(--text-secondary); }
 
-    /* --- Bottom Bar AI Chat Widget --- */
-    .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: rgba(12, 12, 14, 0.9); border-top: 1px solid var(--card-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column; z-index: 1000; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    /* --- Chat Drawer --- */
+    .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: rgba(10, 10, 12, 0.95); border-top: 1px solid var(--card-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column; z-index: 1000; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
     .bottom-bar.collapsed { transform: translateY(calc(100% - 48px)); }
-    .chat-header { height: 48px; background-color: transparent; border-bottom: 1px solid var(--card-border); cursor: pointer; transition: background-color 0.2s; }
-    .chat-header:hover { background-color: rgba(255,255,255,0.02); }
+    .chat-header { height: 48px; background: rgba(232, 93, 4, 0.05); border-bottom: 1px solid var(--card-border); cursor: pointer; transition: background-color 0.2s; }
+    .chat-header:hover { background-color: rgba(232, 93, 4, 0.1); }
     .chat-header-inner { max-width: 900px; margin: 0 auto; height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; color: var(--accent-orange); font-weight: 700; font-size: 13px; letter-spacing: 0.05em; }
     .chat-toggle-icon { font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
     .chat-content { max-width: 900px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; height: 400px; }
     .chat-history { flex-grow: 1; padding: 24px; overflow-y: auto; font-size: 14px; display: flex; flex-direction: column; gap: 16px; }
     .chat-msg { padding: 14px 18px; border-radius: 12px; line-height: 1.5; font-size: 14px; max-width: 85%; }
-    .chat-msg.user { background: var(--card-border); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 4px; }
+    .chat-msg.user { background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 4px; }
     .chat-msg.ai { background: rgba(232, 93, 4, 0.1); border: 1px solid rgba(232, 93, 4, 0.2); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px; }
     .chat-input-area { display: flex; padding: 16px 20px; border-top: 1px solid var(--card-border); background: transparent; gap: 12px; }
     
-    /* --- 📱 MOBILE RESPONSIVENESS --- */
-    @media (max-width: 768px) {
-      body { padding: 20px 16px 100px; }
+    /* --- 📱 MOBILE OPTIMIZATION --- */
+    @media (max-width: 800px) {
+      body { padding: 20px 12px 100px; }
+      .bento-grid { gap: 16px; }
+      .gm-card { padding: 20px; }
       .top-header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
       .dash-title { font-size: 24px; }
-      .day-ring-wrap { flex-direction: column; gap: 24px; text-align: center; }
+      .day-ring-wrap { flex-direction: column; gap: 20px; text-align: center; }
       .health-hero-grid { grid-template-columns: 1fr; }
-      .health-mini-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .gm-input-wrap { flex-direction: column; gap: 12px; }
-      .gm-input-wrap button { width: 100%; padding: 14px; }
       .chat-input-area { flex-direction: column; }
-      .chat-input-area button { padding: 14px; width: 100%; }
       .auth-banner { flex-direction: column; gap: 16px; text-align: center; }
       .auth-banner a { width: 100%; }
     }
-  </style>
+</style>
 </head>
 <body>
 
@@ -255,8 +225,8 @@
      <div class="drawer-header">System Modules</div>
      <button class="drawer-link active" onclick="openTab(event, 'Overview')">⚡ Command Center</button>
      <button class="drawer-link" onclick="openTab(event, 'Health')">🧬 Performance Engine</button>
-     <button class="drawer-link" onclick="openTab(event, 'Portfolio')">📈 Portfolio</button>
-     <button class="drawer-link" onclick="openTab(event, 'Mindset')">🧠 Mindset Engine</button>
+     <button class="drawer-link" onclick="openTab(event, 'Portfolio')">📈 Quant Portfolio</button>
+     <button class="drawer-link" onclick="openTab(event, 'Mindset')">🧠 Mindset & Vault</button>
      <button class="drawer-link" onclick="openTab(event, 'Logistics')">📅 Logistics Hub</button>
   </div>
 
@@ -280,14 +250,13 @@
         <div class="directive-text" id="dailyDirectiveText">Syncing biometric data to generate today's tactical protocol...</div>
       </div>
 
-      <div class="gm-card bento-left" style="justify-content: center;">
+      <div class="gm-card bento-left" style="align-items: center;">
         <div class="goal-ticker" id="goalTicker" style="margin-bottom: 24px; width: 100%;">
             <div class="goal-ticker-led"><span class="goal-ticker-led-dot"></span></div>
             <div class="goal-ticker-label">TARGETS</div>
             <div class="goal-ticker-stage" id="goalTickerStage"></div>
             <div class="goal-ticker-meta" id="goalTickerMeta">0/0</div>
         </div>
-
         <div class="day-ring-wrap" style="padding: 0;">
           <div class="ring-container">
             <svg class="ring-svg" viewBox="0 0 120 120">
@@ -307,22 +276,7 @@
         </div>
       </div>
 
-      <div class="gm-card bento-right">
-         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-             <div class="section-title" style="margin: 0;">Consistency</div>
-             <select id="chart-timeframe" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer;">
-                 <option value="7">7 Days</option>
-                 <option value="30" selected>30 Days</option>
-                 <option value="90">90 Days</option>
-                 <option value="0">All Time</option>
-             </select>
-         </div>
-         <div class="chart-container" style="flex-grow: 1; margin: 0; min-height: 180px;">
-           <canvas id="habitChart"></canvas>
-         </div>
-      </div>
-          
-      <div class="gm-card bento-left" id="cardToday">
+      <div class="gm-card bento-right" id="cardToday">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
           <div>
             <div class="gm-eyebrow" id="todayLabel">Execution</div>
@@ -336,7 +290,7 @@
         </div>
       </div>
 
-      <div class="gm-card bento-right" id="cardTomorrow">
+      <div class="gm-card bento-full" id="cardTomorrow">
         <div class="gm-eyebrow" id="tomorrowLabel" style="margin-bottom: 8px;">Preparation</div>
         <p style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px;">Set your targets tonight. Activates at 6:00 AM.</p>
         <ul class="gm-list" id="goalListTomorrow"></ul>
@@ -357,29 +311,29 @@
         <a href="/api/fitbit/auth">Sync Account</a>
       </div>
 
-      <div id="health-data-view" class="bento-full" style="display: none; width: 100%;">
+      <div id="health-data-view" class="bento-full bento-grid" style="display: none;">
         
-        <div class="health-hero-grid">
-          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-purple);">
+        <div class="health-hero-grid bento-full">
+          <div class="health-hero-card" style="border-top-color: var(--accent-orange);">
             <h3>Health Score</h3>
-            <div class="val" style="color: var(--accent-purple);"><span id="tab-healthscore">--</span></div>
+            <div class="val" style="color: var(--accent-orange);"><span id="tab-healthscore">--</span></div>
             <div style="font-size: 12px; color: var(--text-tertiary);">Readiness Balance</div>
           </div>
-          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-green);">
+          <div class="health-hero-card" style="border-top-color: var(--accent-green);">
             <h3>Recovery</h3>
             <div class="val" style="color: var(--accent-green);"><span id="tab-recovery">--</span><span class="unit">%</span></div>
             <div style="font-size: 12px; color: var(--text-tertiary);">CNS & Sleep</div>
           </div>
-          <div class="gm-card health-hero-card" style="border-top-color: var(--accent-blue);">
+          <div class="health-hero-card" style="border-top-color: var(--accent-blue);">
             <h3>Day Strain</h3>
             <div class="val" style="color: var(--accent-blue);"><span id="tab-strain">--</span><span class="unit">%</span></div>
             <div style="font-size: 12px; color: var(--text-tertiary);">Cardiovascular Load</div>
           </div>
         </div>
 
-        <div class="section-title">Subjective State</div>
-        <div class="gm-card" style="margin-bottom: 30px; width: 100%;">
-          <div class="slider-grid">
+        <div class="gm-card bento-left">
+          <div class="section-title">Subjective State</div>
+          <div class="slider-grid" style="flex-grow: 1;">
             <div class="slider-row">
               <div class="slider-header"><span>Muscle Soreness</span> <span class="slider-val" id="val-sore">1</span></div>
               <input type="range" id="slide-sore" min="1" max="10" value="1" oninput="document.getElementById('val-sore').innerText = this.value;">
@@ -392,52 +346,32 @@
               <div class="slider-header"><span>Motivation</span> <span class="slider-val" id="val-motivate">10</span></div>
               <input type="range" id="slide-motivate" min="1" max="10" value="10" oninput="document.getElementById('val-motivate').innerText = this.value;">
             </div>
-            <button class="gm-add-btn" id="saveSubjectiveBtn" style="margin-top: 16px; width: 100%; padding: 12px; font-size: 14px; background: var(--accent-purple); color: white; transition: 0.3s;">Submit Log</button>
           </div>
+          <button class="gm-add-btn" id="saveSubjectiveBtn" style="margin-top: 24px; width: 100%;">Submit Log</button>
         </div>
 
-        <div class="health-mini-grid">
-          <div class="gm-card health-mini-card">
-            <h3>Steps</h3>
-            <div class="val" id="tab-steps">--</div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>Active</h3>
-            <div class="val"><span id="tab-active">--</span> <span class="unit">m</span></div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>Calories</h3>
-            <div class="val"><span id="tab-calories">--</span> <span class="unit">kcal</span></div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>Sleep</h3>
-            <div class="val" id="tab-sleep">--</div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>RHR</h3>
-            <div class="val"><span id="tab-rhr">--</span> <span class="unit">bpm</span></div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>HRV</h3>
-            <div class="val"><span id="tab-hrv">--</span> <span class="unit">ms</span></div>
-          </div>
-          <div class="gm-card health-mini-card">
-            <h3>SpO2</h3>
-            <div class="val"><span id="tab-spo2">--</span> <span class="unit">%</span></div>
-          </div>
+        <div class="gm-card bento-right" style="padding: 16px;">
+            <div class="health-mini-grid" style="margin: 0;">
+              <div class="health-mini-card"><h3>Steps</h3><div class="val" id="tab-steps">--</div></div>
+              <div class="health-mini-card"><h3>Active</h3><div class="val"><span id="tab-active">--</span> <span class="unit">m</span></div></div>
+              <div class="health-mini-card"><h3>Calories</h3><div class="val"><span id="tab-calories">--</span> <span class="unit">kcal</span></div></div>
+              <div class="health-mini-card"><h3>Sleep</h3><div class="val" id="tab-sleep">--</div></div>
+              <div class="health-mini-card"><h3>RHR</h3><div class="val"><span id="tab-rhr">--</span> <span class="unit">bpm</span></div></div>
+              <div class="health-mini-card"><h3>HRV</h3><div class="val"><span id="tab-hrv">--</span> <span class="unit">ms</span></div></div>
+            </div>
         </div>
 
-        <div class="section-title">7-Day Trends</div>
-        <div class="gm-card" style="width: 100%;">
+        <div class="gm-card bento-full">
+           <div class="section-title">7-Day Trends</div>
            <div class="chart-container">
              <canvas id="trendChart"></canvas>
            </div>
         </div>
 
-        <div class="gm-card" style="margin-top: 24px; width: 100%;">
+        <div class="gm-card bento-full">
           <div class="ai-header">
             <h3><span style="font-size: 24px;">✨</span> Marvin (Physiology)</h3>
-            <button id="btn-ask-coach" class="gm-add-btn">Analyze Protocol</button>
+            <button id="btn-ask-coach" class="gm-add-btn" style="padding: 8px 16px;">Analyze Data</button>
           </div>
           <div id="ai-response" class="ai-response-box">
             Sync your health data and click analyze to generate your custom elite athlete protocol for today.
@@ -448,13 +382,13 @@
     </div>
   </div> 
 
-<div id="Portfolio" class="tab-content">
+  <div id="Portfolio" class="tab-content">
     <div class="container bento-grid">
       
       <div class="gm-card bento-left">
         <div class="section-title">Data Ingestion</div>
         <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-          Export your portfolio from Fidelity <strong>(Accounts & Trade > Positions > Download icon)</strong> and upload the .csv file here.
+          Export your portfolio from Fidelity <strong>(Positions > Download)</strong> and upload the .csv file here.
         </p>
         <input type="file" id="csvFileInput" accept=".csv" style="color: var(--text-primary); margin-bottom: 24px; width: 100%;">
         
@@ -474,13 +408,11 @@
         <div class="ai-header">
           <h3><span style="font-size: 24px;">📈</span> Marvin (Quant)</h3>
         </div>
-        
-        <div class="chat-history" id="portfolio-chat-history" style="height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; flex-grow: 1;">
+        <div class="chat-history" id="portfolio-chat-history" style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; flex-grow: 1;">
              <div class="chat-msg ai">Upload your CSV, then ask me to scan your holdings for market opportunities.</div>
         </div>
-        
         <div class="gm-input-wrap" style="margin-top: 0;">
-          <input type="text" id="portfolio-chat-input" placeholder="Ask your Quant Analyst about specific moves...">
+          <input type="text" id="portfolio-chat-input" placeholder="Ask your Quant Analyst...">
           <button class="gm-add-btn" id="btn-portfolio-chat">Send</button>
         </div>
       </div>
@@ -488,12 +420,12 @@
     </div>
   </div>
 
-<div id="Mindset" class="tab-content">
+  <div id="Mindset" class="tab-content">
     <div class="container bento-grid">
       
       <div class="gm-card bento-left">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div><div class="section-title" style="margin: 0;">Core Habits</div></div>
+            <div class="section-title" style="margin: 0;">Core Habits</div>
             <button id="btn-edit-habits" style="background: transparent; color: var(--accent-orange); border: none; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;">⚙ Edit</button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 12px;" id="habit-container">
@@ -504,30 +436,45 @@
                 <input type="text" id="new-habit-input" placeholder="Add a new daily habit...">
                 <button class="gm-add-btn" id="btn-add-habit">Add</button>
             </div>
-            <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px;">Click the red 'X' on a habit above to delete it.</p>
+            <p style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px;">Click the red 'X' to delete.</p>
         </div>
       </div>
 
       <div class="gm-card bento-right">
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+             <div class="section-title" style="margin: 0;">Consistency</div>
+             <select id="chart-timeframe" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer;">
+                 <option value="7">7 Days</option>
+                 <option value="30" selected>30 Days</option>
+                 <option value="90">90 Days</option>
+                 <option value="0">All Time</option>
+             </select>
+         </div>
+         <div class="chart-container" style="margin: 0; min-height: 180px;">
+           <canvas id="habitChart"></canvas>
+         </div>
+      </div>
+
+      <div class="gm-card bento-left">
         <div class="section-title">Tactical Reflection</div>
-        <textarea id="journal-input" placeholder="Brain-dump your focus for today, or reflect on a recent practice/game. What went well? Where did you lose focus?" style="width: 100%; height: 150px; flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; color: var(--text-primary); font-family: var(--font-body); font-size: 15px; outline: none; resize: none; margin-bottom: 16px;"></textarea>
+        <textarea id="journal-input" placeholder="Brain-dump your focus for today, or reflect on a recent practice/game. What went well? Where did you lose focus?" style="width: 100%; min-height: 150px; flex-grow: 1; margin-bottom: 16px;"></textarea>
         
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             <button class="gm-add-btn" id="btn-save-journal" style="flex: 1;">💾 Save Log</button>
-            <button class="gm-add-btn" id="btn-analyze-mindset" style="flex: 1;">🧠 Marvin (Psychology)</button>
+            <button class="gm-add-btn" id="btn-analyze-mindset" style="flex: 1;">🧠 Psych Eval</button>
         </div>
       </div>
 
-      <div class="gm-card bento-full" id="mindset-ai-card" style="display: none;">
+      <div class="gm-card bento-right">
         <div class="ai-header">
           <h3><span style="font-size: 24px;">🧠</span> Marvin (Psychology)</h3>
         </div>
-        <div id="mindset-ai-response" class="ai-response-box">Analyzing mindset...</div>
+        <div id="mindset-ai-response" class="ai-response-box">Submit your reflection to receive psychological feedback...</div>
       </div>
 
       <div class="bento-full">
-          <div class="section-title" style="margin-top: 12px;">The Cognitive Vault</div>
-          <div class="gm-card" id="journal-vault" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+          <div class="section-title">The Cognitive Vault</div>
+          <div class="gm-card" id="journal-vault" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
              <div style="color: var(--text-tertiary); font-size: 14px;">Loading archives...</div>
           </div>
       </div>
@@ -535,7 +482,7 @@
     </div>
 </div>
 
-<div id="Logistics" class="tab-content">
+  <div id="Logistics" class="tab-content">
     <div class="container bento-grid">
       
       <div id="logistics-auth-view" class="auth-banner bento-full" style="display: flex;">
@@ -560,7 +507,7 @@
       </div>
 
     </div>
-</div>
+  </div>
 
   <div id="ai-bottom-bar" class="bottom-bar collapsed">
     <div class="chat-header" id="chat-header-toggle">
@@ -574,7 +521,7 @@
           <div class="chat-msg ai">How can I help you optimize your day?</div>
       </div>
       <div class="chat-input-area">
-          <button id="btn-mic-chat" style="background: transparent; border: 1px solid var(--card-border); color: #fff; border-radius: 10px; width: 44px; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;">🎙️</button>
+          <button id="btn-mic-chat" style="padding: 0; width: 44px;">🎙️</button>
           <input type="text" id="chat-input" placeholder="Talk to Marvin...">
           <button id="btn-send-chat" class="gm-add-btn">Send</button>
       </div>
@@ -592,7 +539,7 @@
       const osc = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime); // High pitch blip
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
       osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
       
       gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
@@ -605,7 +552,7 @@
       osc.stop(audioCtx.currentTime + 0.15);
     }
 
-// --- Navigation & Tab Logic ---
+    // --- Navigation & Tab Logic ---
     const navDrawer = document.getElementById('nav-drawer');
     const navOverlay = document.getElementById('nav-overlay');
 
@@ -615,7 +562,7 @@
     }
 
     document.getElementById('nav-toggle').addEventListener('click', toggleNav);
-    navOverlay.addEventListener('click', toggleNav); // Clicking the dark background closes the menu
+    navOverlay.addEventListener('click', toggleNav); 
 
     function openTab(evt, tabName) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
@@ -624,11 +571,11 @@
       document.getElementById(tabName).classList.add("active");
       if (evt) evt.currentTarget.classList.add("active");
       
-      // Auto-close the drawer after selecting a module
       navDrawer.classList.remove('open');
       navOverlay.classList.remove('open');
     }
 
+    // --- Weather ---
     function initWeather() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -658,7 +605,7 @@
       }
     }
 
-   // --- Subjective State Logic ---
+   // --- Subjective State ---
     function loadSubjective() {
       const savedDate = localStorage.getItem('subjectiveStateDate');
       const today = getActiveDateString();
@@ -666,13 +613,12 @@
       
       let state;
       if (savedDate === today) {
-        // If they already submitted today, load their saved numbers and lock the button visually
         state = JSON.parse(localStorage.getItem('subjectiveState')) || { sore: 1, energy: 10, motivate: 10 };
         btn.innerText = "✓ Logged for Today";
         btn.style.background = "var(--accent-green) !important";
         btn.style.color = "#000 !important";
+        btn.style.borderColor = "var(--accent-green) !important";
       } else {
-        // If it's a new day, reset the sliders to default so they don't look at stale data
         state = { sore: 1, energy: 10, motivate: 10 };
         btn.innerText = "Submit Log";
         btn.style.background = "var(--accent-orange-dim) !important";
@@ -691,7 +637,6 @@
       };
       
       localStorage.setItem('subjectiveState', JSON.stringify(state));
-      // NEW: Lock in the date so it resets at midnight
       localStorage.setItem('subjectiveStateDate', getActiveDateString()); 
 
       await fetch('/api/save-day', {
@@ -708,9 +653,11 @@
       const btn = document.getElementById('saveSubjectiveBtn');
       btn.innerText = "✓ Logged for Today";
       btn.style.background = "var(--accent-green) !important";
+      btn.style.borderColor = "var(--accent-green) !important";
       btn.style.color = "#000 !important";
     }
-    // --- Core Logic Config ---
+
+    // --- Core Timers & Tickers ---
     const WAKE_HOUR = 8;
     const SLEEP_HOUR = 24;
     const storeGet = (key) => JSON.parse(localStorage.getItem(key) || 'null');
@@ -730,7 +677,6 @@
     let tomorrowKey = `goals:${getTomorrowDateString()}`;
     let appActiveDate = getActiveDateString();
 
-    // --- Task Rollover ---
     function performRollover() {
       const activeStr = getActiveDateString();
       let todayGoals = storeGet(todayKey) || [];
@@ -755,7 +701,6 @@
       if(todayGoals.length > 0) storeSet(todayKey, todayGoals);
     }
 
-    // --- Ticker Logic ---
     let tickerCycleIdx = 0;
     function updateTicker() {
       const goals = storeGet(todayKey) || [];
@@ -776,9 +721,7 @@
       tickerCycleIdx++;
     }
 
-    // --- Day Ring Logic ---
     function updateDayBar() {
-      // 🕛 MIDNIGHT ROLLOVER: Wipe checkboxes natively if a new day has started
       if (appActiveDate !== getActiveDateString()) {
           window.location.reload(true);
       }
@@ -817,7 +760,6 @@
       }
     }
 
-    // --- List Rendering ---
     function buildRow(g, i, key, readOnly) {
       const li = document.createElement('li');
       li.className = `goal-row ${g.done ? 'is-done' : ''}`;
@@ -881,7 +823,7 @@
       document.getElementById('tomorrowInput').onkeydown = (e) => { if(e.key === 'Enter') doAdd('tomorrowInput', tomorrowKey, loadTomorrow); };
     }
 
-    // --- 📈 True Database Chart Renderer ---
+    // --- 📈 Charts & Data ---
     async function renderChart() {
       try {
         const res = await fetch('/api/history');
@@ -892,7 +834,6 @@
         const recData = history.map(day => parseInt(day.recovery) || 0);
 
         const ctx = document.getElementById('trendChart').getContext('2d');
-        
         if (window.myTrendChart) window.myTrendChart.destroy();
 
         window.myTrendChart = new Chart(ctx, {
@@ -913,10 +854,9 @@
             }
           }
         });
-      } catch (err) { console.error("Chart Render Failed:", err); }
+      } catch (err) { console.error("Chart Render Failed", err); }
     }
 
-    // --- 💾 Auto-Save & Health API Integration ---
     async function initHealthTab() {
       try {
         const response = await fetch('/api/health-data');
@@ -930,7 +870,7 @@
         const data = await response.json();
         if (data) {
           document.getElementById('health-auth-view').style.display = 'none';
-          document.getElementById('health-data-view').style.display = 'flex';
+          document.getElementById('health-data-view').style.display = 'grid'; // MUST BE GRID
           
           document.getElementById('tab-healthscore').innerText = data.healthScore || '--';
           document.getElementById('tab-recovery').innerText = data.recovery || '--';
@@ -959,10 +899,10 @@
           renderChart();
           generateMorningBriefing(); 
         }
-      } catch (error) { console.error("Health Tab Failed:", error); }
+      } catch (error) { console.error("Health Tab Failed", error); }
     }
 
-    // --- 🧠 Gemini AI Logic ---
+    // --- 🧠 Gemini AI ---
     async function callGemini(task, content, contextData = {}) {
       try {
         const response = await fetch('/api/gemini', {
@@ -1059,7 +999,7 @@
       chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    // --- 📈 PORTFOLIO ENGINE ---
+    // --- 📈 QUANT PORTFOLIO ---
     let globalPortfolio = [];
     let portfolioTotal = 0;
 
@@ -1077,7 +1017,6 @@
         
         holdings.forEach((stock, idx) => {
           if (stock.symbol !== 'CASH (SPAXX)') symbolsToFetch.push(stock.symbol);
-          
           list.innerHTML += `
             <li class="goal-row" style="padding: 16px;">
               <div style="display: flex; justify-content: space-between; width: 100%;">
@@ -1108,7 +1047,6 @@
                    if (stock.symbol === 'CASH (SPAXX)') {
                        displayEl.innerHTML = `<span style="color: var(--text-tertiary)">Pegged to $1.00</span>`;
                        livePortfolioTotal += stock.valueNum;
-                       
                    } else if(liveData && liveData[stock.symbol]) {
                        const price = liveData[stock.symbol].price;
                        const change = liveData[stock.symbol].changePercent.toFixed(2);
@@ -1199,9 +1137,7 @@
             let valNum = parseFloat(valStr.replace(/[$\s,]/g, '')) || 0;
             let qtyNum = parseFloat(qtyStr.replace(/[$\s,]/g, '')) || 0;
             
-            if (sym === 'CASH (SPAXX)' && valNum === 0 && qtyNum > 0) {
-                valNum = qtyNum;
-            }
+            if (sym === 'CASH (SPAXX)' && valNum === 0 && qtyNum > 0) { valNum = qtyNum; }
 
             newTotal += valNum;
             newHoldings.push({
@@ -1237,13 +1173,12 @@
       }
       
       const historyBox = document.getElementById('portfolio-chat-history');
-      
-      historyBox.innerHTML += `<div class="chat-msg user" style="background: rgba(255,255,255,0.08); padding: 12px 16px; border-radius: 12px; align-self: flex-end; max-width: 85%;">${text}</div>`;
+      historyBox.innerHTML += `<div class="chat-msg user" style="background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 12px; align-self: flex-end; max-width: 85%;">${text}</div>`;
       input.value = '';
       historyBox.scrollTop = historyBox.scrollHeight;
       
       const loadingId = 'port-load-' + Date.now();
-      historyBox.innerHTML += `<div id="${loadingId}" class="chat-msg ai" style="background: rgba(0,0,0,0.4); padding: 12px 16px; border-radius: 12px; border-left: 2px solid var(--accent-green); align-self: flex-start; max-width: 85%; opacity: 0.7;">Scanning markets and analyzing portfolio...</div>`;
+      historyBox.innerHTML += `<div id="${loadingId}" class="chat-msg ai" style="background: rgba(232,93,4,0.1); padding: 12px 16px; border-radius: 12px; border-left: 2px solid var(--accent-orange); align-self: flex-start; max-width: 85%; opacity: 0.7;">Scanning markets and analyzing portfolio...</div>`;
       historyBox.scrollTop = historyBox.scrollHeight;
       
       try {
@@ -1257,7 +1192,6 @@
               })
           });
           const data = await res.json();
-          
           const loadingBubble = document.getElementById(loadingId);
           loadingBubble.innerHTML = (data.reply || data.error).replace(/\*\*/g, '');
           loadingBubble.style.opacity = '1';
@@ -1267,7 +1201,7 @@
       historyBox.scrollTop = historyBox.scrollHeight;
     }
 
-// --- 🧠 MINDSET, JOURNAL & VAULT ENGINE ---
+    // --- 🧠 MINDSET ENGINE & VAULT ---
     let masterHabitList = [];
     let isEditingHabits = false;
 
@@ -1285,7 +1219,7 @@
             html += `
             <div class="goal-row" style="justify-content: space-between;">
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 12px; flex: 1;">
-                    <input type="checkbox" id="${safeId}" data-name="${escapedHabit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-purple);">
+                    <input type="checkbox" id="${safeId}" data-name="${escapedHabit}" class="habit-check" style="width: 20px; height: 20px; accent-color: var(--accent-orange);">
                     <div class="goal-text" style="font-weight: 600;">${habit}</div>
                 </label>
                 ${isEditingHabits ? `<button class="delete-habit-btn" data-index="${idx}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:18px; font-weight: bold;">×</button>` : ''}
@@ -1293,12 +1227,8 @@
         });
         container.innerHTML = html;
 
-        // 1. Re-attach Checkbox Listeners
-        document.querySelectorAll('.habit-check').forEach(box => {
-            box.addEventListener('change', saveJournal);
-        });
+        document.querySelectorAll('.habit-check').forEach(box => { box.addEventListener('change', saveJournal); });
 
-        // 2. THE FIX: Attach Delete Button Listeners Natively
         if (isEditingHabits) {
             document.querySelectorAll('.delete-habit-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
@@ -1353,6 +1283,7 @@
                 body: JSON.stringify({ date: today, habits, reflection })
             });
             btn.style.background = "var(--accent-green) !important";
+            btn.style.borderColor = "var(--accent-green) !important";
             btn.style.color = "#000 !important";
             btn.innerText = "✓ Saved!";
             renderHabitChart(); 
@@ -1361,22 +1292,22 @@
         
         setTimeout(() => {
             btn.style.background = "var(--accent-orange-dim) !important";
+            btn.style.borderColor = "var(--accent-orange) !important";
             btn.style.color = "var(--accent-orange) !important";
             btn.innerText = originalText;
         }, 2000);
     }
 
-    // Natively handles the deletion and UI reload
     async function deleteHabit(index) {
         masterHabitList.splice(index, 1);
-        renderHabitUI(); // Update UI instantly
+        renderHabitUI(); 
         
         await fetch('/api/habits/master', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ habitList: masterHabitList })
         });
-        await loadJournal(); // Re-sync background data
+        await loadJournal(); 
     }
 
     document.getElementById('btn-edit-habits').addEventListener('click', () => {
@@ -1450,7 +1381,6 @@
         } catch (err) { console.error("Chart Failed", err); }
     }
 
-    // --- COGNITIVE VAULT ENGINE ---
     async function loadVault() {
         try {
             const res = await fetch('/api/journal/history?days=0');
@@ -1460,17 +1390,14 @@
             vault.innerHTML = '';
             
             if (history.length === 0) {
-                vault.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px; padding: 16px;">Vault is empty. Log your first entry above.</div>';
+                vault.innerHTML = '<div style="color: var(--text-tertiary); font-size: 14px;">Vault is empty. Log your first entry above.</div>';
                 return;
             }
 
-            // Flip the array so your newest logs appear at the top of the feed
             const feed = [...history].reverse();
-
             feed.forEach(log => {
                 const title = log.title || "Daily Tactical Log";
                 const ref = log.reflection || "No reflection logged.";
-                
                 const [y, m, d] = log.date.split('-');
                 const dateObj = new Date(y, m - 1, d);
                 const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -1487,7 +1414,7 @@
         } catch(e) { console.error("Vault offline"); }
     }
 
-    // --- 🎙️ MARVIN VOICE RECOGNITION UPLINK ---
+    // --- 🎙️ VOICE UPLINK ---
     const micBtn = document.getElementById('btn-mic-chat');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -1507,7 +1434,7 @@
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
             document.getElementById('chat-input').value = transcript;
-            sendChatMessage(); // Automatically send to Marvin once you stop speaking
+            sendChatMessage(); 
         };
 
         recognition.onspeechend = () => {
@@ -1525,28 +1452,23 @@
             document.getElementById('chat-input').placeholder = "Mic error or denied...";
         };
     } else {
-        // Hide mic if the browser doesn't support it
         micBtn.style.display = 'none';
     }
 
-// --- 📅 LOGISTICS ENGINE ---
+    // --- 📅 LOGISTICS ENGINE ---
     async function loadLogistics() {
         try {
             const res = await fetch('/api/logistics');
-            
-            // If server returns an error (meaning we aren't logged in), show the Auth button
             if (!res.ok) {
                 document.getElementById('logistics-auth-view').style.display = 'flex';
                 document.getElementById('logistics-data-view').style.display = 'none';
                 return;
             }
             
-            // Otherwise, show the data
             document.getElementById('logistics-auth-view').style.display = 'none';
-            document.getElementById('logistics-data-view').style.display = 'grid';
+            document.getElementById('logistics-data-view').style.display = 'grid'; // Grid applied
             
             const data = await res.json();
-            
             const calList = document.getElementById('calendar-list');
             calList.innerHTML = '';
             
@@ -1598,7 +1520,6 @@
     // --- Init Application ---
     window.addEventListener('DOMContentLoaded', () => {
       
-      // AUTO-REDIRECT TO HEALTH TAB AFTER GOOGLE LOGIN
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('tab') === 'logistics') {
           openTab(null, 'Logistics');
@@ -1623,7 +1544,6 @@
       loadJournal();
       loadLogistics();
       
-      // Event Listeners
       document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
       document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
       document.getElementById('saveSubjectiveBtn').addEventListener('click', saveSubjective);
@@ -1636,7 +1556,7 @@
           if (!text) return alert("Write something in your journal first!");
           
           await saveJournal();
-          document.getElementById('mindset-ai-card').style.display = 'block';
+          document.getElementById('mindset-ai-card').style.display = 'flex';
           document.getElementById('mindset-ai-response').innerText = "Analyzing mental state and habit completion...";
           
           const habits = {};
