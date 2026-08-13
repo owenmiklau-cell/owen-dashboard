@@ -909,47 +909,49 @@
       } catch (error) { console.error("Health Tab Failed", error); }
     }
 
-    // --- 🗣️ UPGRADED VOICE SYNTHESIS ENGINE ---
-function speakText(text) {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop any current speech
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Ranked list of the most human-sounding native voices
-        const preferredVoices = [
-            'Samantha', // Apple's premium female voice
-            'Alex',     // Apple's high-quality male voice
-            'Google US English', // Google Chrome's premium cloud voice
-            'Google UK English Male',
-            'Microsoft Mark - English (United States)', // Windows 10/11 natural voice
-            'Daniel' // Mac/iOS UK voice
-        ];
+// --- 🗣️ HIGH-FIDELITY VOICE SYNTHESIS ENGINE (ELEVENLABS) ---
+async function speakText(text) {
+    try {
+        // Change the mic button to show it's generating audio
+        const micBtn = document.getElementById('btn-mic-chat');
+        const originalText = micBtn.innerText;
+        micBtn.innerText = "🔊";
 
-        // Hunt for the best available voice on the user's current device
-        let selectedVoice = null;
-        for (let name of preferredVoices) {
-            selectedVoice = voices.find(v => v.name === name || v.name.includes(name));
-            if (selectedVoice) break;
+        // Hit our new backend route
+        const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) throw new Error("TTS API failed");
+
+        // Convert the response to an audio blob and play it
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.onended = () => {
+            micBtn.innerText = "🎙️"; // Reset mic button when done speaking
+        };
+
+        await audio.play();
+        
+    } catch (err) {
+        console.error("ElevenLabs failed, falling back to legacy browser voice:", err);
+        
+        // 🛡️ FALLBACK: If ElevenLabs fails (e.g., out of free credits), use the browser voice
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            utterance.voice = voices.find(v => v.name.includes('UK English Male') || v.name.includes('Daniel')) || voices[0];
+            utterance.rate = 1.05;
+            window.speechSynthesis.speak(utterance);
+            document.getElementById('btn-mic-chat').innerText = "🎙️";
         }
-
-        // Fallback to the first available English voice if premiums aren't found
-        if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith('en')) || null;
-        }
-
-        utterance.voice = selectedVoice;
-        utterance.rate = 1.05; // Slightly faster but natural
-        utterance.pitch = 1.0; 
-        
-        window.speechSynthesis.speak(utterance);
     }
 }
-
-// Pro-tip: Browsers load voices asynchronously. 
-// Add this to ensure voices are loaded before Marvin tries to speak:
-window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 
 // --- ⚡ STREAMING AI ENGINE ---
 async function callGeminiStream(task, content, globalContext, updateCallback) {

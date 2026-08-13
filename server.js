@@ -776,6 +776,47 @@ CRITICAL RULES:
     }
 });
 
+// --- 🎙️ ELEVENLABS "JARVIS" VOICE ENGINE ---
+app.post('/api/tts', async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ error: "Text is required" });
+
+        const apiKey = process.env.ELEVENLABS_API_KEY;
+        // Fallback to a default British Male voice if the ID isn't set
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBcs6ScO1Bxg1s'; 
+
+        if (!apiKey) throw new Error("ElevenLabs API key missing in environment variables.");
+
+        // Call the ElevenLabs API using their ultra-fast turbo model
+        const response = await axios.post(
+            `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+            {
+                text: text,
+                model_id: "eleven_turbo_v2_5", // The fastest model for real-time conversation
+                voice_settings: { 
+                    stability: 0.5, 
+                    similarity_boost: 0.75 
+                }
+            },
+            {
+                headers: {
+                    'xi-api-key': apiKey,
+                    'Content-Type': 'application/json',
+                },
+                responseType: 'arraybuffer', // Crucial: Tells Axios to expect a binary file, not JSON
+            }
+        );
+
+        // Send the audio file buffer back to the frontend
+        res.set('Content-Type', 'audio/mpeg');
+        res.send(response.data);
+    } catch (error) {
+        console.error("TTS Engine Error:", error.response?.data?.message || error.message);
+        res.status(500).json({ error: "Failed to generate AI audio." });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`\n--- SYSTEM ONLINE ---`);
     console.log(`Server running at: http://localhost:${PORT}`);
