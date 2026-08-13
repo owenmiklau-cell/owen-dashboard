@@ -909,21 +909,47 @@
       } catch (error) { console.error("Health Tab Failed", error); }
     }
 
-    // --- 🗣️ VOICE SYNTHESIS ENGINE ---
+    // --- 🗣️ UPGRADED VOICE SYNTHESIS ENGINE ---
 function speakText(text) {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel(); // Stop any current speech
+        
         const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Find a clean, professional voice (defaults to standard if not found)
         const voices = window.speechSynthesis.getVoices();
-        utterance.voice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Samantha')) || null;
         
-        utterance.rate = 1.1; // Slightly faster for an "elite" feel
-        utterance.pitch = 0.9;
+        // Ranked list of the most human-sounding native voices
+        const preferredVoices = [
+            'Samantha', // Apple's premium female voice
+            'Alex',     // Apple's high-quality male voice
+            'Google US English', // Google Chrome's premium cloud voice
+            'Google UK English Male',
+            'Microsoft Mark - English (United States)', // Windows 10/11 natural voice
+            'Daniel' // Mac/iOS UK voice
+        ];
+
+        // Hunt for the best available voice on the user's current device
+        let selectedVoice = null;
+        for (let name of preferredVoices) {
+            selectedVoice = voices.find(v => v.name === name || v.name.includes(name));
+            if (selectedVoice) break;
+        }
+
+        // Fallback to the first available English voice if premiums aren't found
+        if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.startsWith('en')) || null;
+        }
+
+        utterance.voice = selectedVoice;
+        utterance.rate = 1.05; // Slightly faster but natural
+        utterance.pitch = 1.0; 
+        
         window.speechSynthesis.speak(utterance);
     }
 }
+
+// Pro-tip: Browsers load voices asynchronously. 
+// Add this to ensure voices are loaded before Marvin tries to speak:
+window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 
 // --- ⚡ STREAMING AI ENGINE ---
 async function callGeminiStream(task, content, globalContext, updateCallback) {
