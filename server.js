@@ -551,10 +551,10 @@ app.post('/api/journal', async (req, res) => {
         // Have Marvin auto-generate a title if you actually wrote a reflection
         if (reflection && reflection.trim().length > 5) {
             try {
-                // Note: Make sure 'gemini-3.5-flash' is the correct model string for your API version
+                // Note: Make sure 'gemini-1.5-flash' is the correct model string for your API version
                 const prompt = `You are Marvin. Read this athlete's daily journal: "${reflection}". Generate a punchy, 3-to-4 word title summarizing it. Return ONLY the title.`;
                 const response = await ai.models.generateContent({
-                    model: 'gemini-1.5-flash', // Updated to standard Flash model, change back if you have specialized access
+                    model: 'gemini-3.5-flash', 
                     contents: prompt,
                 });
                 title = response.text.replace(/["*]/g, '').trim();
@@ -710,6 +710,67 @@ app.post('/api/gemini', async (req, res) => {
     } catch (error) {
         console.error("Gemini API Error:", error);
         res.status(500).json({ error: "Marvin is currently offline." });
+    }
+});
+
+// --- ⚡ UNIFIED STREAMING AI ENGINE (WITH MODULE AWARENESS) ---
+app.post('/api/gemini-stream', async (req, res) => {
+    // 1. Establish SSE headers for streaming responses
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    try {
+        const { task, content, activeModule, globalContext } = req.body;
+
+        // 2. Define specialized module lenses
+        const moduleLenses = {
+            health: "PRIMARY LENS: Elite Sports Scientist & Athletic Performance Director. Focus on HRV, nervous system recovery, strain capacity, sleep quality, and physical readiness.",
+            quant: "PRIMARY LENS: Quantitative Analyst & Portfolio Manager. Focus on asset allocation, risk management, macro factors, cash reserves (treat SPAXX as cash), and strategic growth.",
+            logistics: "PRIMARY LENS: Master Tactical Coordinator. Focus on academic deadlines, Google Calendar scheduling, friction reduction, and time management.",
+            mindset: "PRIMARY LENS: High-Performance Sports Psychologist. Focus on mental resilience, journal analysis, habit completion, burnout detection, and daily focus.",
+            general: "PRIMARY LENS: Chief Operating Officer & System Director. Provide holistic, high-level guidance across all domains."
+        };
+
+        const selectedLens = moduleLenses[activeModule] || moduleLenses.general;
+
+        // 3. Build the Unified + Module-Aware System Prompt
+        const systemPrompt = `You are Marvin, the central unified AI intelligence of Athlete OS. You are speaking to and coaching a highly driven 14-year-old student-athlete.
+        
+CURRENT ACTIVE VIEW: ${activeModule ? activeModule.toUpperCase() : 'GENERAL'}
+${selectedLens}
+
+FULL SYSTEM GLOBAL DATA (Cross-reference these whenever applicable):
+- Biometrics & Health: ${JSON.stringify(globalContext?.health || {})}
+- Capital & Portfolio: ${JSON.stringify(globalContext?.portfolio || {})}
+- Schedule & Logistics: ${JSON.stringify(globalContext?.logistics || {})}
+- Mindset & Habits: ${JSON.stringify(globalContext?.mindset || {})}
+
+CRITICAL RULES:
+1. Lead with your primary module lens, but cross-connect domains when valuable (e.g., if in Quant and the user asks about risk, note if their Health Recovery is low and warn against high stress).
+2. Keep responses direct, punchy, and conversational. Speak directly to the athlete.
+3. DO NOT use markdown bolding (**) or formatting headers (##), as plain text is required for voice synthesis text-to-speech.`;
+
+        // 4. Stream response using standard stable model
+        const responseStream = await ai.models.generateContentStream({
+            model: 'gemini-3.5-flash',
+            contents: `${systemPrompt}\n\nTask Context: ${task}\nUser Input: ${content}`,
+        });
+
+        // 5. Pipe chunks to frontend in real-time
+        for await (const chunk of responseStream) {
+            if (chunk.text) {
+                res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+            }
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+
+    } catch (error) {
+        console.error("Gemini Streaming Error:", error);
+        res.write(`data: ${JSON.stringify({ error: "Marvin streaming connection failed." })}\n\n`);
+        res.end();
     }
 });
 

@@ -909,46 +909,105 @@
       } catch (error) { console.error("Health Tab Failed", error); }
     }
 
-    // --- 🧠 Gemini AI ---
-    // 🔥 GHOST CRASH FIX: Forces safe string returns so Javascript never throws an undefined crash
-    async function callGemini(task, content, contextData = {}) {
-      try {
-        const response = await fetch('/api/gemini', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ task, content, contextData })
+    // --- 🗣️ VOICE SYNTHESIS ENGINE ---
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any current speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Find a clean, professional voice (defaults to standard if not found)
+        const voices = window.speechSynthesis.getVoices();
+        utterance.voice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Samantha')) || null;
+        
+        utterance.rate = 1.1; // Slightly faster for an "elite" feel
+        utterance.pitch = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+// --- ⚡ STREAMING AI ENGINE ---
+async function callGeminiStream(task, content, globalContext, updateCallback) {
+    try {
+        const response = await fetch('/api/gemini-stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task, content, globalContext })
         });
-        const data = await response.json();
-        return data.reply || data.error || data.advice || "Error: Marvin returned empty data.";
-      } catch (err) { return "Connection to Marvin failed."; }
-    }
 
-function getOmniscientData() {
-  let savedState = { sore: 1, energy: 10, motivate: 10 };
-  
-  // 🛡️ Safe parsing to prevent fatal JS crashes
-  try {
-    const raw = localStorage.getItem('subjectiveState');
-    if (raw && raw !== "undefined" && raw !== "null") {
-      savedState = JSON.parse(raw);
-    }
-  } catch (e) {
-    console.warn("Local storage state corrupted, falling back to defaults.");
-  }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let fullResponse = '';
 
-  return {
-    healthScore: document.getElementById('tab-healthscore').innerText,
-    recovery: document.getElementById('tab-recovery').innerText,
-    strain: document.getElementById('tab-strain').innerText,
-    sleep: document.getElementById('tab-sleep').innerText,
-    hrv: document.getElementById('tab-hrv').innerText,
-    currentPhase: document.getElementById('dayRingPhase').innerText,
-    weather: weatherString,
-    soreness: savedState.sore,
-    energy: savedState.energy,
-    motivation: savedState.motivate,
-    todayTargets: storeGet(todayKey) || []
-  };
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            // Decode the chunk and split by SSE formatting
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.replace('data: ', '').trim();
+                    if (dataStr === '[DONE]') {
+                        // Stream complete: trigger voice synthesis
+                        speakText(fullResponse);
+                        return fullResponse;
+                    }
+                    
+                    try {
+                        const parsed = JSON.parse(dataStr);
+                        if (parsed.text) {
+                            fullResponse += parsed.text;
+                            // Call the UI update function with the new text
+                            updateCallback(fullResponse); 
+                        }
+                    } catch (e) { /* Ignore incomplete JSON chunks */ }
+                }
+            }
+        }
+        return fullResponse;
+    } catch (err) {
+        updateCallback("Connection to Marvin failed.");
+        return "Error";
+    }
+}
+
+function getGlobalState() {
+    // 1. Health
+    let savedState = { sore: 1, energy: 10, motivate: 10 };
+    try { const raw = localStorage.getItem('subjectiveState'); if(raw && raw !== "undefined") savedState = JSON.parse(raw); } catch(e){}
+
+    // 2. Mindset
+    const habits = {};
+    document.querySelectorAll('.habit-check').forEach(box => { habits[box.getAttribute('data-name')] = box.checked; });
+
+    // 3. Logistics
+    const calList = document.getElementById('calendar-list').innerText || "Clear";
+    const classList = document.getElementById('classroom-list').innerText || "Clear";
+
+    return {
+        health: {
+            score: document.getElementById('tab-healthscore').innerText,
+            recovery: document.getElementById('tab-recovery').innerText,
+            strain: document.getElementById('tab-strain').innerText,
+            sleep: document.getElementById('tab-sleep').innerText,
+            phase: document.getElementById('dayRingPhase').innerText,
+            subjective: savedState
+        },
+        portfolio: {
+            value: portfolioTotal || 0,
+            holdings: globalPortfolio || []
+        },
+        mindset: {
+            habits: habits,
+            recentJournal: document.getElementById('journal-input').value
+        },
+        logistics: {
+            agenda: calList.substring(0, 200), // Trim to save tokens
+            homework: classList.substring(0, 200)
+        }
+    };
 }
 
     async function generateMorningBriefing() {
@@ -999,27 +1058,24 @@ function getOmniscientData() {
     }
 
     async function sendChatMessage() {
-      const question = chatInput.value.trim();
-      if (!question) return;
-      
-      ensureDrawerOpen();
-      chatHistory.innerHTML += `<div class="chat-msg user">${question}</div>`;
-      chatInput.value = "";
-      chatHistory.scrollTop = chatHistory.scrollHeight;
-      
-      const loadingId = 'loading-' + Date.now();
-      chatHistory.innerHTML += `<div id="${loadingId}" class="chat-msg ai" style="opacity: 0.7;">Thinking...</div>`;
-      chatHistory.scrollTop = chatHistory.scrollHeight;
+    const question = chatInput.value.trim();
+    if (!question) return;
+    
+    ensureDrawerOpen();
+    chatHistory.innerHTML += `<div class="chat-msg user">${question}</div>`;
+    chatInput.value = "";
+    
+    const loadingId = 'marvin-msg-' + Date.now();
+    chatHistory.innerHTML += `<div id="${loadingId}" class="chat-msg ai">...</div>`;
+    chatHistory.scrollTop = chatHistory.scrollHeight;
 
-      const aiResponse = await callGemini('general_chat', question, getOmniscientData());
-      
-      const loadingBubble = document.getElementById(loadingId);
-      // Safety check applied
-      const safeText = typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse);
-      loadingBubble.innerHTML = safeText.replace(/\*\*/g, '');
-      loadingBubble.style.opacity = '1';
-      chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
+    // Call the streaming function and pass a callback to update the bubble instantly
+    await callGeminiStream('general_chat', question, getGlobalState(), (incrementalText) => {
+        const bubble = document.getElementById(loadingId);
+        bubble.innerHTML = incrementalText;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    });
+}
 
     // --- 📈 QUANT PORTFOLIO ---
     let globalPortfolio = [];
