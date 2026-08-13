@@ -922,21 +922,26 @@
       } catch (err) { return "Connection to Marvin failed."; }
     }
 
-    function getOmniscientData() {
-      return {
-        healthScore: document.getElementById('tab-healthscore').innerText,
-        recovery: document.getElementById('tab-recovery').innerText,
-        strain: document.getElementById('tab-strain').innerText,
-        sleep: document.getElementById('tab-sleep').innerText,
-        hrv: document.getElementById('tab-hrv').innerText,
-        currentPhase: document.getElementById('dayRingPhase').innerText,
-        weather: weatherString,
-        soreness: document.getElementById('slide-sore').value,
-        energy: document.getElementById('slide-energy').value,
-        motivation: document.getElementById('slide-motivate').value,
-        todayTargets: storeGet(todayKey) || []
-      };
-    }
+function getOmniscientData() {
+  // Fetch the explicitly saved state, fallback to defaults if not submitted yet
+  const savedState = JSON.parse(localStorage.getItem('subjectiveState')) || { 
+      sore: 1, energy: 10, motivate: 10 
+  };
+
+  return {
+    healthScore: document.getElementById('tab-healthscore').innerText,
+    recovery: document.getElementById('tab-recovery').innerText,
+    strain: document.getElementById('tab-strain').innerText,
+    sleep: document.getElementById('tab-sleep').innerText,
+    hrv: document.getElementById('tab-hrv').innerText,
+    currentPhase: document.getElementById('dayRingPhase').innerText,
+    weather: weatherString,
+    soreness: savedState.sore,       // <-- Pulls from saved state, not the raw DOM slider
+    energy: savedState.energy,       // <-- Pulls from saved state, not the raw DOM slider
+    motivation: savedState.motivate, // <-- Pulls from saved state, not the raw DOM slider
+    todayTargets: storeGet(todayKey) || []
+  };
+}
 
     async function generateMorningBriefing() {
       const todayDate = getActiveDateString();
