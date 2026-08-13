@@ -358,6 +358,7 @@
               <div class="health-mini-card"><h3>Sleep</h3><div class="val" id="tab-sleep">--</div></div>
               <div class="health-mini-card"><h3>RHR</h3><div class="val"><span id="tab-rhr">--</span> <span class="unit">bpm</span></div></div>
               <div class="health-mini-card"><h3>HRV</h3><div class="val"><span id="tab-hrv">--</span> <span class="unit">ms</span></div></div>
+              <div class="health-mini-card"><h3>SpO2</h3><div class="val"><span id="tab-spo2">--</span> <span class="unit">%</span></div></div>
             </div>
         </div>
 
@@ -923,10 +924,17 @@
     }
 
 function getOmniscientData() {
-  // Fetch the explicitly saved state, fallback to defaults if not submitted yet
-  const savedState = JSON.parse(localStorage.getItem('subjectiveState')) || { 
-      sore: 1, energy: 10, motivate: 10 
-  };
+  let savedState = { sore: 1, energy: 10, motivate: 10 };
+  
+  // 🛡️ Safe parsing to prevent fatal JS crashes
+  try {
+    const raw = localStorage.getItem('subjectiveState');
+    if (raw && raw !== "undefined" && raw !== "null") {
+      savedState = JSON.parse(raw);
+    }
+  } catch (e) {
+    console.warn("Local storage state corrupted, falling back to defaults.");
+  }
 
   return {
     healthScore: document.getElementById('tab-healthscore').innerText,
@@ -936,9 +944,9 @@ function getOmniscientData() {
     hrv: document.getElementById('tab-hrv').innerText,
     currentPhase: document.getElementById('dayRingPhase').innerText,
     weather: weatherString,
-    soreness: savedState.sore,       // <-- Pulls from saved state, not the raw DOM slider
-    energy: savedState.energy,       // <-- Pulls from saved state, not the raw DOM slider
-    motivation: savedState.motivate, // <-- Pulls from saved state, not the raw DOM slider
+    soreness: savedState.sore,
+    energy: savedState.energy,
+    motivation: savedState.motivate,
     todayTargets: storeGet(todayKey) || []
   };
 }

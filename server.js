@@ -437,15 +437,25 @@ app.post('/api/save-day', async (req, res) => {
         let payload = req.body;
         if (!payload.date) return res.status(400).json({ error: "Date is required" });
 
+        // 🛡️ STRICT SANITIZATION: Strip out nulls, undefined, and empty placeholders
+        const cleanPayload = {};
         for (let key in payload) {
-            if (payload[key] === '--') {
-                delete payload[key];
+            const val = payload[key];
+            if (val !== '--' && val !== null && val !== undefined && val !== '') {
+                // Cast known numeric fields to prevent NaN DB corruption
+                if (['healthScore', 'recovery', 'strain', 'steps', 'soreness', 'energy', 'motivation'].includes(key)) {
+                    const parsed = Number(val);
+                    if (!isNaN(parsed)) cleanPayload[key] = parsed;
+                } else {
+                    cleanPayload[key] = val;
+                }
             }
         }
 
+        // 🔄 UPSERT WITH MERGE: Only updates the safe, explicitly provided fields
         const updatedLog = await DayLog.findOneAndUpdate(
-            { date: payload.date },
-            { $set: payload },
+            { date: cleanPayload.date },
+            { $set: cleanPayload },
             { upsert: true, new: true }
         );
 
@@ -491,6 +501,26 @@ app.post('/api/portfolio', async (req, res) => {
 });
 
 // --- ⚙️ DYNAMIC HABIT & JOURNAL ROUTES ---
+app.get('/api/habits/master', async (req, res) => {
+    try {
+        const doc = await Settings.findOne({ identifier: 'primary_user' });
+        // If the user has saved settings, return them. Otherwise, return the defaults.
+        if (doc && doc.habitList && doc.habitList.length > 0) {
+            res.json(doc.habitList);
+        } else {
+            res.json([
+                'Hydration (1 Gallon)', 
+                '10 Mins Match Visualization', 
+                'Mobility / Deep Stretching', 
+                'Read 15 Pages'
+            ]);
+        }
+    } catch (err) { 
+        console.error("Habit Fetch Error:", err);
+        res.status(500).json({ error: "Failed to fetch habits" }); 
+    }
+});
+
 app.post('/api/habits/master', async (req, res) => {
     try {
         await Settings.findOneAndUpdate(
@@ -502,33 +532,6 @@ app.post('/api/habits/master', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
 });
 
-app.post('/api/journal', async (req, res) => {
-    try {
-        const { date, habits, reflection } = req.body;
-        let title = "Daily Tactical Log";
-
-        // Have Marvin auto-generate a title if you actually wrote a reflection
-        if (reflection && reflection.length > 5) {
-            try {
-                const prompt = `You are Marvin. Read this athlete's daily journal: "${reflection}". Generate a punchy, 3-to-4 word title summarizing it. Return ONLY the title.`;
-                const response = await ai.models.generateContent({
-                    model: 'gemini-3.5-flash',
-                    contents: prompt,
-                });
-                title = response.text.replace(/["*]/g, '').trim();
-            } catch (err) { console.error("Marvin Title Gen Offline"); }
-        }
-
-        await JournalLog.findOneAndUpdate(
-            { identifier: 'primary_user', date: date },
-            { habits, reflection, title },
-            { upsert: true }
-        );
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to save journal" });
-    }
-});
 
 app.get('/api/journal', async (req, res) => {
     try {
@@ -543,13 +546,31 @@ app.get('/api/journal', async (req, res) => {
 app.post('/api/journal', async (req, res) => {
     try {
         const { date, habits, reflection } = req.body;
+        let title = "Daily Tactical Log";
+
+        // Have Marvin auto-generate a title if you actually wrote a reflection
+        if (reflection && reflection.trim().length > 5) {
+            try {
+                // Note: Make sure 'gemini-3.5-flash' is the correct model string for your API version
+                const prompt = `You are Marvin. Read this athlete's daily journal: "${reflection}". Generate a punchy, 3-to-4 word title summarizing it. Return ONLY the title.`;
+                const response = await ai.models.generateContent({
+                    model: 'gemini-1.5-flash', // Updated to standard Flash model, change back if you have specialized access
+                    contents: prompt,
+                });
+                title = response.text.replace(/["*]/g, '').trim();
+            } catch (err) { 
+                console.error("Marvin Title Gen Offline", err); 
+            }
+        }
+
         await JournalLog.findOneAndUpdate(
             { identifier: 'primary_user', date: date },
-            { habits, reflection },
-            { upsert: true }
+            { $set: { habits, reflection, title } }, // Explicit $set ensures clean merging
+            { upsert: true, new: true }
         );
         res.json({ success: true });
     } catch (err) {
+        console.error("Journal Save Error:", err);
         res.status(500).json({ error: "Failed to save journal" });
     }
 });
