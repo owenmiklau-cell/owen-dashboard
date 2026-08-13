@@ -783,17 +783,19 @@ app.post('/api/tts', async (req, res) => {
         if (!text) return res.status(400).json({ error: "Text is required" });
 
         const apiKey = process.env.ELEVENLABS_API_KEY;
-        // Fallback to a default British Male voice if the ID isn't set
         const voiceId = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBcs6ScO1Bxg1s'; 
 
-        if (!apiKey) throw new Error("ElevenLabs API key missing in environment variables.");
+        if (!apiKey) {
+            console.error("❌ Missing ELEVENLABS_API_KEY in environment variables!");
+            return res.status(500).json({ error: "API Key missing" });
+        }
 
-        // Call the ElevenLabs API using their ultra-fast turbo model
+        // Call ElevenLabs using the newest, lowest-latency Flash model
         const response = await axios.post(
             `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
             {
                 text: text,
-                model_id: "eleven_turbo_v2_5", // The fastest model for real-time conversation
+                model_id: "eleven_flash_v2_5", // Updated to the newest fast model
                 voice_settings: { 
                     stability: 0.5, 
                     similarity_boost: 0.75 
@@ -804,15 +806,22 @@ app.post('/api/tts', async (req, res) => {
                     'xi-api-key': apiKey,
                     'Content-Type': 'application/json',
                 },
-                responseType: 'arraybuffer', // Crucial: Tells Axios to expect a binary file, not JSON
+                responseType: 'arraybuffer', // Crucial: Expect binary audio
             }
         );
 
-        // Send the audio file buffer back to the frontend
         res.set('Content-Type', 'audio/mpeg');
         res.send(response.data);
     } catch (error) {
-        console.error("TTS Engine Error:", error.response?.data?.message || error.message);
+        // Decode the binary error so we can read exactly why ElevenLabs rejected it
+        let errorMsg = error.message;
+        if (error.response && error.response.data) {
+            try {
+                errorMsg = Buffer.from(error.response.data).toString('utf8');
+            } catch (e) { /* Ignore buffer parse errors */ }
+        }
+        
+        console.error("❌ TTS Engine Error:", errorMsg);
         res.status(500).json({ error: "Failed to generate AI audio." });
     }
 });
