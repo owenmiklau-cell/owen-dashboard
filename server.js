@@ -589,8 +589,6 @@ app.get('/api/journal/history', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
 });
 
-const { google } = require('googleapis');
-
 // Dedicated OAuth client for Google Classroom
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
