@@ -4,6 +4,7 @@ const axios = require('axios');
 const path = require('path');
 const mongoose = require('mongoose');
 const { GoogleGenAI } = require('@google/genai');
+const { google } = require('googleapis');
 
 const app = express();
 const PORT = 3000;
@@ -586,6 +587,102 @@ app.get('/api/journal/history', async (req, res) => {
         history = history.reverse(); 
         res.json(history);
     } catch (err) { res.status(500).json({ error: "Failed to fetch journal history" }); }
+});
+
+const { google } = require('googleapis');
+
+// Dedicated OAuth client for Google Classroom
+const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/classroom/callback'
+);
+
+// 1. Trigger Independent School Account Login
+app.get('/api/auth/classroom', (req, res) => {
+    const scopes = [
+        'https://www.googleapis.com/auth/classroom.courses.readonly',
+        'https://www.googleapis.com/auth/classroom.coursework.me',
+        'https://www.googleapis.com/auth/classroom.announcements.readonly'
+    ];
+
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'select_account', // Forces Google to let you pick your school email
+        scope: scopes
+    });
+
+    res.redirect(url);
+});
+
+// 2. Auth Callback Route
+app.get('/api/auth/classroom/callback', async (req, res) => {
+    const { code } = req.query;
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        
+        // Pass token back to frontend via script message/redirect
+        res.send(`
+            <script>
+                localStorage.setItem('classroom_token', '${tokens.access_token}');
+                if (window.opener) {
+                    window.opener.postMessage('classroom_connected', '*');
+                    window.close();
+                } else {
+                    window.location.href = '/?classroom=connected';
+                }
+            </script>
+        `);
+    } catch (err) {
+        console.error("Classroom Auth Error:", err);
+        res.status(500).send("Failed to authenticate Google Classroom.");
+    }
+});
+
+// 3. Fetch Coursework using School Access Token
+app.get('/api/classroom/assignments', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "No school token provided" });
+
+    const accessToken = authHeader.split(' ')[1];
+    
+    try {
+        const auth = new google.auth.OAuth2();
+        auth.setCredentials({ access_token: accessToken });
+
+        const classroom = google.classroom({ version: 'v1', auth });
+        
+        // Get courses
+        const coursesRes = await classroom.courses.list({ courseStates: ['ACTIVE'] });
+        const courses = coursesRes.data.courses || [];
+
+        let allCoursework = [];
+
+        // Fetch assignments for each course
+        for (const course of courses) {
+            try {
+                const workRes = await classroom.courses.courseWork.list({ courseId: course.id });
+                const work = workRes.data.courseWork || [];
+                
+                work.forEach(item => {
+                    allCoursework.push({
+                        id: item.id,
+                        title: item.title,
+                        courseName: course.name,
+                        dueDate: item.dueDate ? `${item.dueDate.year}-${String(item.dueDate.month).padStart(2, '0')}-${String(item.dueDate.day).padStart(2, '0')}` : null,
+                        link: item.alternateLink
+                    });
+                });
+            } catch (e) {
+                // Ignore courses with disabled coursework
+            }
+        }
+
+        res.json({ assignments: allCoursework });
+    } catch (err) {
+        console.error("Fetch Classroom Error:", err);
+        res.status(500).json({ error: "Failed to fetch assignments." });
+    }
 });
 
 // --- 📈 LIVE STOCK MARKET ROUTE (FIREWALL BYPASS) ---

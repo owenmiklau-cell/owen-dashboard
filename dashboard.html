@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=512&bold=true">
   <link rel="icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=64&bold=true">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <style>
     :root {
       /* --- PREMIUM MATTE GRAPHITE & BURNT ORANGE PALETTE --- */
@@ -483,15 +484,23 @@
     </div>
 </div>
 
-  <div id="Logistics" class="tab-content">
+<div id="Logistics" class="tab-content">
     <div class="container bento-grid">
       
-      <div id="logistics-auth-view" class="auth-banner bento-full" style="display: flex;">
+      <div id="logistics-auth-view" class="auth-banner bento-full" style="display: flex; align-items: center; justify-content: space-between;">
         <span>Connect your School Google Account to sync agenda.</span>
-        <a href="/api/logistics/auth">Sync School</a>
+        <button id="btn-school-auth" onclick="connectSchoolAccount()" style="padding: 8px 16px; border-radius: 8px; background: #4285F4; color: white; border: none; font-weight: bold; cursor: pointer;">
+            Sync School
+        </button>
       </div>
 
       <div id="logistics-data-view" class="bento-full bento-grid" style="display: none;">
+          
+          <div class="gm-card bento-full" style="margin-bottom: 20px;">
+             <div class="section-title" style="margin-bottom: 15px;">Master Schedule</div>
+             <div id="logistics-calendar" style="min-height: 450px;"></div>
+          </div>
+
           <div class="gm-card bento-left">
              <div class="section-title">Schedule Uplink</div>
              <ul class="gm-list" id="calendar-list">
@@ -505,10 +514,11 @@
                 <li style="color: var(--text-tertiary); font-size: 14px;">Syncing coursework...</li>
              </ul>
           </div>
+
       </div>
 
     </div>
-  </div>
+</div>
 
   <div id="ai-bottom-bar" class="bottom-bar collapsed">
     <div class="chat-header" id="chat-header-toggle">
@@ -1753,6 +1763,104 @@ function getGlobalState() {
         btn.innerText = originalText;
       });
     });
+
+let calendar;
+
+// 1. Initialize Calendar on DOM Load
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('logistics-calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        editable: true,
+        selectable: true,
+        events: [
+            // Sample placeholder tasks
+            { title: 'Morning Workout', start: new Date().toISOString().split('T')[0] + 'T06:00:00' }
+        ],
+        dateClick: function(info) {
+            const title = prompt('Enter Event Title:');
+            if (title) {
+                calendar.addEvent({
+                    title: title,
+                    start: info.dateStr,
+                    allDay: true
+                });
+            }
+        }
+    });
+
+    calendar.render();
+
+    // Check if school account is already linked
+    if (localStorage.getItem('classroom_token')) {
+        updateSchoolButtonUI(true);
+        loadSchoolAssignments();
+    }
+});
+
+// 2. Open Independent School Auth Popup
+function connectSchoolAccount() {
+    const width = 500, height = 600;
+    const left = (screen.width / 2) - (width / 2);
+    const top = (screen.height / 2) - (height / 2);
+    
+    window.open('/api/auth/classroom', 'SchoolAuth', `width=${width},height=${height},top=${top},left=${left}`);
+}
+
+// Listen for successful login from popup
+window.addEventListener('message', (event) => {
+    if (event.data === 'classroom_connected') {
+        updateSchoolButtonUI(true);
+        loadSchoolAssignments();
+    }
+});
+
+function updateSchoolButtonUI(isConnected) {
+    const btn = document.getElementById('btn-school-auth');
+    if (isConnected) {
+        btn.innerText = "✅ School Account Connected";
+        btn.style.background = "#34A853";
+    }
+}
+
+// 3. Fetch Assignments and Inject into Calendar
+async function loadSchoolAssignments() {
+    const token = localStorage.getItem('classroom_token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/classroom/assignments', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error("Token expired or invalid");
+
+        const data = await res.json();
+
+        // Convert assignments to Calendar events
+        data.assignments.forEach(item => {
+            if (item.dueDate) {
+                calendar.addEvent({
+                    id: item.id,
+                    title: `📚 ${item.courseName}: ${item.title}`,
+                    start: item.dueDate,
+                    url: item.link,
+                    color: '#ea4335' // Distinct color for assignments
+                });
+            }
+        });
+    } catch (err) {
+        console.error("Error loading assignments:", err);
+        localStorage.removeItem('classroom_token');
+        updateSchoolButtonUI(false);
+    }
+}
   </script>
 </body>
 </html>
