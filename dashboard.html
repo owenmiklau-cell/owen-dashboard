@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=512&bold=true">
   <link rel="icon" href="https://ui-avatars.com/api/?name=M&background=000000&color=e85d04&size=64&bold=true">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <style>
     :root {
       /* --- PREMIUM MATTE GRAPHITE & BURNT ORANGE PALETTE --- */
@@ -1583,31 +1583,41 @@ function getGlobalState() {
             }
             
             document.getElementById('logistics-auth-view').style.display = 'none';
-            document.getElementById('logistics-data-view').style.display = 'grid'; // Grid applied
-            
-            const data = await res.json();
-            const calList = document.getElementById('calendar-list');
-            calList.innerHTML = '';
-            
-            if (!data.calendar || data.calendar.length === 0) {
-                calList.innerHTML = '<li style="color: var(--text-tertiary); font-size: 14px;">Schedule clear. No upcoming events.</li>';
-            } else {
-                data.calendar.slice(0, 5).forEach(event => {
-                    const title = event.summary || "Busy";
-                    let timeStr = "All Day";
-                    if (event.start && event.start.dateTime) {
-                        const dateObj = new Date(event.start.dateTime);
-                        timeStr = dateObj.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                    }
-                    calList.innerHTML += `
-                    <li class="goal-row" style="padding: 16px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%;">
-                            <div style="font-weight: 700; font-size: 15px;">${title}</div>
-                            <div style="font-family: var(--font-mono); color: var(--accent-blue); font-size: 13px;">${timeStr}</div>
-                        </div>
-                    </li>`;
-                });
-            }
+document.getElementById('logistics-data-view').style.display = 'grid'; // Grid applied
+
+// 🚨 ADD THIS NEW BLOCK RIGHT HERE 🚨
+// This forces FullCalendar to recalculate its size now that the div is visible
+if (typeof calendar !== 'undefined' && calendar) {
+    setTimeout(() => {
+        calendar.render();
+        calendar.updateSize();
+    }, 100);
+}
+// ------------------------------------
+
+const data = await res.json();
+const calList = document.getElementById('calendar-list');
+calList.innerHTML = '';
+
+if (!data.calendar || data.calendar.length === 0) {
+    calList.innerHTML = '<li style="color: var(--text-tertiary); font-size: 14px;">Schedule clear. No upcoming events.</li>';
+} else {
+    data.calendar.slice(0, 5).forEach(event => {
+        const title = event.summary || "Busy";
+        let timeStr = "All Day";
+        if (event.start && event.start.dateTime) {
+            const dateObj = new Date(event.start.dateTime);
+            timeStr = dateObj.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+        calList.innerHTML += `
+        <li class="goal-row" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+                <div style="font-weight: 700; font-size: 15px;">${title}</div>
+                <div style="font-family: var(--font-mono); color: var(--accent-blue); font-size: 13px;">${timeStr}</div>
+            </div>
+        </li>`;
+    });
+}
 
             const classList = document.getElementById('classroom-list');
             classList.innerHTML = '';
