@@ -606,7 +606,8 @@ app.get('/api/auth/classroom', (req, res) => {
 
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
-        prompt: 'select_account', // Forces Google to let you pick your school email
+        // 🔥 THIS IS THE MAGIC LINE: It forces Google to show the account selection screen
+        prompt: 'consent select_account', 
         scope: scopes
     });
 
