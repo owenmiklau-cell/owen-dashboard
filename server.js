@@ -188,7 +188,10 @@ app.get('/api/fitbit/auth', (req, res) => {
 app.get('/api/logistics/auth', (req, res) => {
     const rawScopes = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/gmail.readonly";
     const encodedScopes = encodeURIComponent(rawScopes);
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/logistics/callback&scope=${encodedScopes}&access_type=offline&prompt=consent`;    
+    
+    // Added 'select_account' to the prompt so Google forces you to choose your school email
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${process.env.FITBIT_CLIENT_ID}&redirect_uri=${BASE_URL}/logistics/callback&scope=${encodedScopes}&access_type=offline&prompt=consent%20select_account`;    
+    
     res.redirect(authUrl);
 });
 
@@ -389,7 +392,8 @@ app.get('/api/health-data', async (req, res) => {
 // --- 📅 CENTRAL NERVOUS SYSTEM (LOGISTICS HUB) ---
 app.get('/api/logistics', async (req, res) => {
     try {
-        const accessToken = await getValidAccessToken();
+        // 🔥 CRITICAL FIX: Changed from getValidAccessToken() to getValidLogisticsToken()
+        const accessToken = await getValidLogisticsToken();
         const headers = { headers: { 'Authorization': `Bearer ${accessToken}` } };
 
         // 1. Fetch Calendar Events (Next 7 days)
@@ -407,6 +411,7 @@ app.get('/api/logistics', async (req, res) => {
         let courses = coursesRes.status === 'fulfilled' ? coursesRes.value.data.courses || [] : [];
         
         let assignments = [];
+        
         // 3. Fetch homework for up to 3 active courses to keep the system lightning fast
         if (courses.length > 0) {
             const hwRequests = courses.slice(0, 3).map(c => 
@@ -417,7 +422,6 @@ app.get('/api/logistics', async (req, res) => {
                 if (hwRes.status === 'fulfilled' && hwRes.value.data.courseWork) {
                     const courseName = courses[idx].name;
                     hwRes.value.data.courseWork.forEach(work => {
-                        // Only add assignments that haven't been completed yet
                         assignments.push({ course: courseName, title: work.title, due: work.dueDate });
                     });
                 }
