@@ -27,6 +27,9 @@ const daySchema = new mongoose.Schema({
     strain: Number,
     steps: Number,
     sleep: String,
+    sleepMinutes: Number, // NEW: For algorithm math
+    sleepStart: String,   // NEW: Exact time you fell asleep
+    sleepEnd: String,     // NEW: Exact time you woke up
     soreness: Number,
     energy: Number,
     motivation: Number
@@ -322,15 +325,27 @@ app.get('/api/health-data', async (req, res) => {
             if (calForMath > 0) calories = Math.round(calForMath).toLocaleString();
         }
 
+        let sleepStart = null;
+        let sleepEnd = null;
+
         if (sleepRes.status === 'fulfilled') {
             const points = sleepRes.value.data.dataPoints || [];
             for (let i = points.length - 1; i >= 0; i--) {
                 const s = points[i].sleep || points[i];
                 let mins = getNum(s.summary?.minutesAsleep || s.minutesAsleep);
                 if (mins === 0 && s.durationMillis) mins = s.durationMillis / 60000;
+                
                 if (mins > 0) {
                     sleepMinsForMath = Math.round(mins);
                     sleepStr = `${Math.floor(sleepMinsForMath / 60)}h ${sleepMinsForMath % 60}m`;
+                    
+                    // Extract exact start and end times
+                    if (points[i].startTimeMillis) {
+                        sleepStart = new Date(Number(points[i].startTimeMillis)).toISOString();
+                    }
+                    if (points[i].endTimeMillis) {
+                        sleepEnd = new Date(Number(points[i].endTimeMillis)).toISOString();
+                    }
                     break; 
                 }
             }
@@ -381,11 +396,113 @@ app.get('/api/health-data', async (req, res) => {
             healthScore = Math.min(Math.max(Math.round((recNum * 0.65) + (strainNum * 0.35) + overtrainingPenalty), 1), 100);
         }
 
-        res.json({ steps, calories, activeMins, sleep: sleepStr, rhr, hrv, spo2, recovery, strain, healthScore });
+// Update this final line in your health-data route:
+res.json({ 
+    steps, calories, activeMins, sleep: sleepStr, 
+    sleepMinutes: sleepMinsForMath, sleepStart, sleepEnd, // NEW ADDITIONS
+    rhr, hrv, spo2, recovery, strain, healthScore 
+});
 
     } catch (error) {
         console.error("Health API Error:", error.message);
         res.status(500).json({ error: error.message || "Failed to fetch live health data" });
+    }
+});
+
+// --- 💡 ESP32 DYNAMIC 30-DAY CIRCADIAN LIGHTING ROUTE ---
+app.get('/api/hardware/lights', async (req, res) => {
+    try {
+        // 1. Fetch Today's Data
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayLog = await DayLog.findOne({ identifier: 'primary_user', date: todayStr }) || {};
+        
+        const recovery = todayLog.recovery || 100;
+        const strain = todayLog.strain || 0;
+
+        // 2. Fetch the past 30 days of history
+        const past30Days = await DayLog.find({ identifier: 'primary_user' })
+            .sort({ date: -1 })
+            .limit(30);
+
+        let totalSleepMins = 0;
+        let wakeHourSum = 0;
+        let validDays = 0;
+
+        // 3. Analyze historical circadian rhythm
+        past30Days.forEach(log => {
+            if (log.sleepMinutes && log.sleepMinutes > 0 && log.sleepEnd) {
+                totalSleepMins += log.sleepMinutes;
+                
+                // Convert wake-up time to a decimal hour (e.g., 6:30 AM = 6.5)
+                const endDt = new Date(log.sleepEnd);
+                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+                const parts = formatter.formatToParts(endDt);
+                let h = parseInt(parts.find(p => p.type === 'hour').value);
+                if (h === 24) h = 0;
+                let m = parseInt(parts.find(p => p.type === 'minute').value);
+                
+                wakeHourSum += h + (m / 60);
+                validDays++;
+            }
+        });
+
+        // 4. Calculate Baselines (Fallback to 8 hrs sleep and 6:30 AM wake if no data)
+        const avgSleepMins = validDays > 0 ? (totalSleepMins / validDays) : 480; 
+        const WAKE_TIME = validDays > 0 ? (wakeHourSum / validDays) : 6.5; 
+
+        // 5. Dynamic Sleep Target Algorithm
+        let targetSleepMins = avgSleepMins;
+        if (strain > 70) targetSleepMins += 30; // +30 mins if high physical strain
+        if (recovery < 40) targetSleepMins += 45; // +45 mins if CNS is fried
+
+        // Calculate exact target bedtime based on anchored wake time
+        let BED_TIME = WAKE_TIME - (targetSleepMins / 60);
+        if (BED_TIME < 0) BED_TIME += 24; // Handle midnight wrap-around
+
+        // Wind-down starts 1 hour before target bedtime
+        let WIND_DOWN_TIME = BED_TIME - 1;
+        if (WIND_DOWN_TIME < 0) WIND_DOWN_TIME += 24;
+
+        // 6. Get Current Local Time
+        const currentFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+        const timeParts = currentFormatter.formatToParts(new Date());
+        let currHour = parseInt(timeParts.find(p => p.type === 'hour').value);
+        if (currHour === 24) currHour = 0;
+        const currMin = parseInt(timeParts.find(p => p.type === 'minute').value);
+        const decimalTime = currHour + (currMin / 60);
+
+        // 7. Output State Machine
+        let lightMode = "ACTIVE";
+        let r = 255, g = 255, b = 255; // Default daylight
+
+        // Handle midnight wrap-around for time comparisons
+        const isSleeping = (BED_TIME > WAKE_TIME) 
+            ? (decimalTime >= BED_TIME || decimalTime < WAKE_TIME - 0.5) 
+            : (decimalTime >= BED_TIME && decimalTime < WAKE_TIME - 0.5);
+
+        const isWindingDown = (WIND_DOWN_TIME > BED_TIME)
+            ? (decimalTime >= WIND_DOWN_TIME || decimalTime < BED_TIME)
+            : (decimalTime >= WIND_DOWN_TIME && decimalTime < BED_TIME);
+
+        if (decimalTime >= WAKE_TIME - 0.5 && decimalTime <= WAKE_TIME + 0.5) {
+            lightMode = "WAKE_UP";
+            r = 255; g = 180; b = 50; // Warm Sunrise
+        } else if (isWindingDown) {
+            lightMode = "WIND_DOWN";
+            r = 220; g = 40; b = 0; // Melatonin-preserving deep amber
+        } else if (isSleeping) {
+            lightMode = "SLEEP";
+            r = 0; g = 0; b = 0; // Lights Out
+        } else if (recovery < 40) {
+            lightMode = "RECOVERY_ALERT";
+            r = 255; g = 0; b = 0; // Daytime Red Alert
+        }
+
+        // Send a hyper-lightweight CSV string directly to the ESP32
+        res.send(`${lightMode},${r},${g},${b}`);
+    } catch (err) {
+        console.error("Hardware Light Sync Error:", err);
+        res.send("ERROR,0,0,0");
     }
 });
 

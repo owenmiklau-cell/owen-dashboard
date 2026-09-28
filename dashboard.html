@@ -656,16 +656,22 @@
       localStorage.setItem('subjectiveState', JSON.stringify(state));
       localStorage.setItem('subjectiveStateDate', getActiveDateString()); 
 
+      // Inside initHealthTab(), replace your /api/save-day fetch with this:
       await fetch('/api/save-day', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: getActiveDateString(),
-          soreness: state.sore,
-          energy: state.energy,
-          motivation: state.motivate
-        })
-      });
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date: getActiveDateString(),
+              healthScore: data.healthScore,
+              recovery: data.recovery,
+              strain: data.strain,
+              steps: data.steps,
+              sleep: data.sleep,
+              sleepMinutes: data.sleepMinutes, // NEW
+              sleepStart: data.sleepStart,     // NEW
+              sleepEnd: data.sleepEnd          // NEW
+            })
+          });
       
       const btn = document.getElementById('saveSubjectiveBtn');
       btn.innerText = "✓ Logged for Today";
