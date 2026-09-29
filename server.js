@@ -409,61 +409,73 @@ res.json({
     }
 });
 
-// --- 💡 ESP32 DYNAMIC 30-DAY CIRCADIAN LIGHTING ROUTE ---
-app.get('/api/hardware/lights', async (req, res) => {
+// --- 💡 AUTONOMOUS MEROSS CIRCADIAN LIGHTING ENGINE ---
+const MerossCloud = require('meross-cloud');
+
+const meross = new MerossCloud({
+    email: process.env.MEROSS_EMAIL,
+    password: process.env.MEROSS_PASSWORD
+});
+
+let targetLight = null;
+
+// Connect to Meross Cloud on startup
+meross.connect().then(() => {
+    console.log("✅ Connected to Meross Cloud");
+    const devices = meross.getDeviceList();
+    const deviceName = process.env.MEROSS_DEVICE_NAME || "Room Light";
+    
+    targetLight = devices.find(d => d.name === deviceName);
+    if (targetLight) {
+        console.log(`✅ Linked to Meross Light: ${targetLight.name}`);
+        // Start the automated light control loop (runs every 5 minutes)
+        setInterval(updateMerossLights, 5 * 60 * 1000);
+        updateMerossLights(); // Run once immediately
+    } else {
+        console.log("❌ Could not find Meross device named:", deviceName);
+    }
+}).catch(err => console.error("❌ Meross Connection Error:", err));
+
+async function updateMerossLights() {
+    if (!targetLight) return;
+
     try {
-        // 1. Fetch Today's Data
         const todayStr = new Date().toISOString().split('T')[0];
         const todayLog = await DayLog.findOne({ identifier: 'primary_user', date: todayStr }) || {};
-        
         const recovery = todayLog.recovery || 100;
         const strain = todayLog.strain || 0;
 
-        // 2. Fetch the past 30 days of history
-        const past30Days = await DayLog.find({ identifier: 'primary_user' })
-            .sort({ date: -1 })
-            .limit(30);
+        const past30Days = await DayLog.find({ identifier: 'primary_user' }).sort({ date: -1 }).limit(30);
+        
+        let totalSleepMins = 0, wakeHourSum = 0, validDays = 0;
 
-        let totalSleepMins = 0;
-        let wakeHourSum = 0;
-        let validDays = 0;
-
-        // 3. Analyze historical circadian rhythm
         past30Days.forEach(log => {
             if (log.sleepMinutes && log.sleepMinutes > 0 && log.sleepEnd) {
                 totalSleepMins += log.sleepMinutes;
-                
-                // Convert wake-up time to a decimal hour (e.g., 6:30 AM = 6.5)
                 const endDt = new Date(log.sleepEnd);
                 const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
                 const parts = formatter.formatToParts(endDt);
                 let h = parseInt(parts.find(p => p.type === 'hour').value);
                 if (h === 24) h = 0;
                 let m = parseInt(parts.find(p => p.type === 'minute').value);
-                
                 wakeHourSum += h + (m / 60);
                 validDays++;
             }
         });
 
-        // 4. Calculate Baselines (Fallback to 8 hrs sleep and 6:30 AM wake if no data)
         const avgSleepMins = validDays > 0 ? (totalSleepMins / validDays) : 480; 
         const WAKE_TIME = validDays > 0 ? (wakeHourSum / validDays) : 6.5; 
 
-        // 5. Dynamic Sleep Target Algorithm
         let targetSleepMins = avgSleepMins;
-        if (strain > 70) targetSleepMins += 30; // +30 mins if high physical strain
-        if (recovery < 40) targetSleepMins += 45; // +45 mins if CNS is fried
+        if (strain > 70) targetSleepMins += 30; 
+        if (recovery < 40) targetSleepMins += 45; 
 
-        // Calculate exact target bedtime based on anchored wake time
         let BED_TIME = WAKE_TIME - (targetSleepMins / 60);
-        if (BED_TIME < 0) BED_TIME += 24; // Handle midnight wrap-around
+        if (BED_TIME < 0) BED_TIME += 24; 
 
-        // Wind-down starts 1 hour before target bedtime
         let WIND_DOWN_TIME = BED_TIME - 1;
         if (WIND_DOWN_TIME < 0) WIND_DOWN_TIME += 24;
 
-        // 6. Get Current Local Time
         const currentFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
         const timeParts = currentFormatter.formatToParts(new Date());
         let currHour = parseInt(timeParts.find(p => p.type === 'hour').value);
@@ -471,11 +483,10 @@ app.get('/api/hardware/lights', async (req, res) => {
         const currMin = parseInt(timeParts.find(p => p.type === 'minute').value);
         const decimalTime = currHour + (currMin / 60);
 
-        // 7. Output State Machine
-        let lightMode = "ACTIVE";
-        let r = 255, g = 255, b = 255; // Default daylight
+        let r = 255, g = 255, b = 255;
+        let luminance = 100; // Brightness (0-100)
+        let isOn = true;
 
-        // Handle midnight wrap-around for time comparisons
         const isSleeping = (BED_TIME > WAKE_TIME) 
             ? (decimalTime >= BED_TIME || decimalTime < WAKE_TIME - 0.5) 
             : (decimalTime >= BED_TIME && decimalTime < WAKE_TIME - 0.5);
@@ -485,26 +496,37 @@ app.get('/api/hardware/lights', async (req, res) => {
             : (decimalTime >= WIND_DOWN_TIME && decimalTime < BED_TIME);
 
         if (decimalTime >= WAKE_TIME - 0.5 && decimalTime <= WAKE_TIME + 0.5) {
-            lightMode = "WAKE_UP";
-            r = 255; g = 180; b = 50; // Warm Sunrise
+            // WAKE UP: Warm Sunrise
+            r = 255; g = 180; b = 50; 
+            luminance = 100;
         } else if (isWindingDown) {
-            lightMode = "WIND_DOWN";
-            r = 220; g = 40; b = 0; // Melatonin-preserving deep amber
+            // WIND DOWN: Deep Amber
+            r = 220; g = 40; b = 0; 
+            luminance = 40; // Dim the lights
         } else if (isSleeping) {
-            lightMode = "SLEEP";
-            r = 0; g = 0; b = 0; // Lights Out
+            // SLEEP: Turn lights off
+            isOn = false;
         } else if (recovery < 40) {
-            lightMode = "RECOVERY_ALERT";
-            r = 255; g = 0; b = 0; // Daytime Red Alert
+            // LOW RECOVERY ALERT: Red
+            r = 255; g = 0; b = 0; 
+            luminance = 80;
         }
 
-        // Send a hyper-lightweight CSV string directly to the ESP32
-        res.send(`${lightMode},${r},${g},${b}`);
+        if (!isOn) {
+            await targetLight.turnOff();
+            console.log("Meross: Lights turned OFF (Sleep mode)");
+        } else {
+            await targetLight.turnOn();
+            // Convert RGB to Meross's required integer format
+            const rgbInt = (r << 16) | (g << 8) | b;
+            await targetLight.controlLight({ rgb: rgbInt, luminance: luminance });
+            console.log(`Meross: Set RGB(${r},${g},${b}) at ${luminance}% brightness`);
+        }
+
     } catch (err) {
-        console.error("Hardware Light Sync Error:", err);
-        res.send("ERROR,0,0,0");
+        console.error("Meross Loop Error:", err);
     }
-});
+}
 
 // --- 📅 CENTRAL NERVOUS SYSTEM (LOGISTICS HUB) ---
 app.get('/api/logistics', async (req, res) => {
