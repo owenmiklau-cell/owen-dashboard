@@ -687,6 +687,65 @@ app.post('/api/habits/master', async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Failed to save habits" }); }
 });
 
+// --- 📊 CIRCADIAN DASHBOARD ROUTE ---
+app.get('/api/circadian', async (req, res) => {
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayLog = await DayLog.findOne({ identifier: 'primary_user', date: todayStr }) || {};
+        const recovery = todayLog.recovery || 100;
+        const strain = todayLog.strain || 0;
+
+        const past30Days = await DayLog.find({ identifier: 'primary_user' }).sort({ date: -1 }).limit(30);
+        
+        let totalSleepMins = 0, wakeHourSum = 0, validDays = 0;
+        past30Days.forEach(log => {
+            if (log.sleepMinutes && log.sleepMinutes > 0 && log.sleepEnd) {
+                totalSleepMins += log.sleepMinutes;
+                const endDt = new Date(log.sleepEnd);
+                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+                const parts = formatter.formatToParts(endDt);
+                let h = parseInt(parts.find(p => p.type === 'hour').value);
+                if (h === 24) h = 0;
+                let m = parseInt(parts.find(p => p.type === 'minute').value);
+                wakeHourSum += h + (m / 60);
+                validDays++;
+            }
+        });
+
+        const avgSleepMins = validDays > 0 ? (totalSleepMins / validDays) : 480; 
+        const WAKE_TIME = validDays > 0 ? (wakeHourSum / validDays) : 6.5; 
+
+        let targetSleepMins = avgSleepMins;
+        if (strain > 70) targetSleepMins += 30; 
+        if (recovery < 40) targetSleepMins += 45; 
+
+        let BED_TIME = WAKE_TIME - (targetSleepMins / 60);
+        if (BED_TIME < 0) BED_TIME += 24; 
+        let WIND_DOWN_TIME = BED_TIME - 1;
+        if (WIND_DOWN_TIME < 0) WIND_DOWN_TIME += 24;
+
+        // Helper to convert decimal hours (e.g., 22.5) to "10:30 PM"
+        const formatTime = (dec) => {
+            let h = Math.floor(dec);
+            let m = Math.round((dec - h) * 60);
+            if (m === 60) { h += 1; m = 0; }
+            if (h >= 24) h -= 24;
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            let displayH = h % 12;
+            if (displayH === 0) displayH = 12;
+            return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        res.json({
+            wakeUp: formatTime(WAKE_TIME),
+            windDown: formatTime(WIND_DOWN_TIME),
+            bedTime: formatTime(BED_TIME)
+        });
+    } catch (err) {
+        console.error("Circadian Route Error:", err);
+        res.status(500).json({ error: "Failed to calculate schedule" });
+    }
+});
 
 app.get('/api/journal', async (req, res) => {
     try {

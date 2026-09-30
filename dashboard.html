@@ -363,6 +363,13 @@
             </div>
         </div>
 
+        <div style="padding: 20px; border: 1px solid #ccc; border-radius: 8px; margin-top: 20px; font-family: monospace;">
+          <h3>🌙 JARVIS Circadian Rhythm</h3>
+          <p><strong>Wind Down (Amber Lights):</strong> <span id="windDownTime">Loading...</span></p>
+          <p><strong>Target Bedtime (Lights Out):</strong> <span id="bedTime">Loading...</span></p>
+          <p><strong>Anchored Wake Up (Sunrise):</strong> <span id="wakeUpTime">Loading...</span></p>
+        </div>
+
         <div class="gm-card bento-full">
            <div class="section-title">7-Day Trends</div>
            <div class="chart-container">
@@ -1877,6 +1884,21 @@ async function loadSchoolAssignments() {
         updateSchoolButtonUI(false);
     }
 }
+
+async function loadCircadianSchedule() {
+    try {
+        const res = await fetch('/api/circadian');
+        const data = await res.json();
+        document.getElementById('windDownTime').innerText = data.windDown;
+        document.getElementById('bedTime').innerText = data.bedTime;
+        document.getElementById('wakeUpTime').innerText = data.wakeUp;
+    } catch (err) {
+        console.error('Failed to load circadian data', err);
+    }
+}
+
+// Call this immediately to populate the card
+loadCircadianSchedule();
   </script>
 </body>
 </html>
