@@ -735,7 +735,7 @@ app.post('/api/journal', async (req, res) => {
            try {
                const prompt = `You are Marvin. Read this athlete's daily journal: "${reflection}". Generate a punchy, 3-to-4 word title summarizing it. Return ONLY the title.`;
                const response = await ai.models.generateContent({
-                   model: 'gemini-1.5-flash', // FIXED: Model version corrected
+                   model: 'gemini-3.5-flash', // FIXED: Model version corrected
                    contents: prompt,
                });
                title = response.text.replace(/["*]/g, '').trim();
@@ -911,7 +911,7 @@ app.post('/api/ai-coach', async (req, res) => {
        Based on this data, give them 3 actionable bullet points for today.`;
        
        const response = await ai.models.generateContent({
-           model: 'gemini-1.5-flash', // FIXED: Model version corrected
+           model: 'gemini-3.5-flash', // FIXED: Model version corrected
            contents: systemPrompt,
        });
        res.json({ advice: response.text });
@@ -964,7 +964,7 @@ app.post('/api/gemini', async (req, res) => {
            Provide a short, punchy 3-bullet-point response giving them tactical mental advice for tomorrow. Keep it professional, intense, and encouraging. If they address you as Marvin, answer naturally.`;
        }
        const response = await ai.models.generateContent({
-           model: 'gemini-1.5-flash', // FIXED: Model version corrected
+           model: 'gemini-3.5-flash', // FIXED: Model version corrected
            contents: `${systemPrompt}\n\nUser Input: ${content}`,
        });
        res.json({ reply: response.text });
@@ -1006,7 +1006,7 @@ CRITICAL RULES:
 4. DO NOT use markdown bolding (**) or formatting headers (##), as plain text is required for voice synthesis text-to-speech.`;
        
        const responseStream = await ai.models.generateContentStream({
-           model: 'gemini-1.5-flash', // FIXED: Model version corrected
+           model: 'gemini-3.5-flash', // FIXED: Model version corrected
            contents: `${systemPrompt}\n\nTask Context: ${task}\nUser Input: ${content}`,
        });
        
