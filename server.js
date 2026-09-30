@@ -419,24 +419,35 @@ const meross = new MerossCloud({
 
 let targetLight = null;
 
-// Connect to Meross Cloud on startup
-meross.connect().then(() => {
+// Listen for the connection success event
+meross.on('connected', () => {
     console.log("✅ Connected to Meross Cloud");
-    const devices = meross.getDeviceList();
-    const deviceName = process.env.MEROSS_DEVICE_NAME || "Room Light";
+});
+
+// Listen for devices as they load in
+meross.on('deviceInitialized', (deviceId, deviceDef, device) => {
+    const targetName = process.env.MEROSS_DEVICE_NAME || "Room Light";
     
-    targetLight = devices.find(d => d.name === deviceName);
-    if (targetLight) {
-        console.log(`✅ Linked to Meross Light: ${targetLight.name}`);
+    // Check if this initialized device matches your targeted room light
+    if (deviceDef.devName === targetName || device.name === targetName) {
+        console.log(`✅ Linked to Meross Light: ${targetName}`);
+        targetLight = device;
+        
         // Start the automated light control loop (runs every 5 minutes)
         setInterval(updateMerossLights, 5 * 60 * 1000);
         updateMerossLights(); // Run once immediately
-    } else {
-        console.log("❌ Could not find Meross device named:", deviceName);
     }
-}).catch(err => console.error("❌ Meross Connection Error:", err));
+});
+
+meross.on('error', (err) => {
+    console.error("❌ Meross Error:", err);
+});
+
+// Trigger the connection (no .then() required)
+meross.connect();
 
 async function updateMerossLights() {
+// ... keep the rest of this function exactly the same
     if (!targetLight) return;
 
     try {
