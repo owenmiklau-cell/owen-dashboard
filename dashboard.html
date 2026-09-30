@@ -370,6 +370,13 @@
           <p><strong>Anchored Wake Up (Sunrise):</strong> <span id="wakeUpTime">Loading...</span></p>
         </div>
 
+        <div style="padding: 20px; border: 1px solid #ccc; border-radius: 8px; margin-top: 20px; font-family: monospace;">
+          <h3>🔄 JARVIS Calibration</h3>
+          <p>Pull 30 days of historical sleep data from Google Health to train the algorithm.</p>
+          <button id="syncHistoryBtn" style="padding: 10px 20px; cursor: pointer; font-weight: bold;">Run 30-Day Sync</button>
+          <span id="syncStatus" style="margin-left: 15px; color: #666;"></span>
+      </div>
+
         <div class="gm-card bento-full">
            <div class="section-title">7-Day Trends</div>
            <div class="chart-container">
@@ -1899,6 +1906,28 @@ async function loadCircadianSchedule() {
 
 // Call this immediately to populate the card
 loadCircadianSchedule();
+
+document.getElementById('syncHistoryBtn').addEventListener('click', async () => {
+    const statusText = document.getElementById('syncStatus');
+    statusText.innerText = "Downloading history from Google...";
+    
+    try {
+        const res = await fetch('/api/sync-history');
+        const data = await res.text();
+        
+        if (res.ok && data.includes("Success")) {
+            statusText.innerText = "✅ Sync Complete. Algorithm trained.";
+            statusText.style.color = "green";
+        } else {
+            statusText.innerText = "❌ Sync failed. Make sure you are logged in.";
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        console.error("Sync Error:", err);
+        statusText.innerText = "❌ Network error.";
+        statusText.style.color = "red";
+    }
+});
   </script>
 </body>
 </html>

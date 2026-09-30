@@ -851,6 +851,64 @@ app.get('/api/auth/classroom/callback', async (req, res) => {
     }
 });
 
+// --- 🔄 GOOGLE HEALTH 30-DAY TIME MACHINE ---
+app.get('/api/sync-history', async (req, res) => {
+    try {
+        // REPLACE THIS variable with however you grab the Google token in your other routes 
+        // (e.g., req.session.token, req.user.accessToken, etc.)
+        const accessToken = await getValidAccessToken(); 
+        
+        if (!accessToken) {
+            return res.send("Error: No Google token found. Make sure you are authenticated.");
+        }
+
+        // Calculate timestamps for exactly 30 days ago
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+        
+        // Fetch ALL sessions from Google Fitness for the last 30 days
+        const url = `https://www.googleapis.com/fitness/v1/users/me/sessions?startTime=${thirtyDaysAgo.toISOString()}&endTime=${now.toISOString()}`;
+        
+        // Node 18+ native fetch
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await response.json();
+        
+        if (!data.session) return res.send("No data found from Google Health.");
+
+        // Filter for SLEEP sessions only (Google's activityType code for sleep is 72)
+        const sleepSessions = data.session.filter(s => s.activityType === 72);
+        let addedCount = 0;
+        
+        // Loop through the 30 days and save them into your database
+        for (const session of sleepSessions) {
+            const startDt = new Date(parseInt(session.startTimeMillis));
+            const endDt = new Date(parseInt(session.endTimeMillis));
+            const dateStr = endDt.toISOString().split('T')[0];
+            const sleepMinutes = (endDt.getTime() - startDt.getTime()) / 60000;
+            
+            await DayLog.findOneAndUpdate(
+                { identifier: 'primary_user', date: dateStr },
+                {
+                    sleepStart: startDt.toISOString(),
+                    sleepEnd: endDt.toISOString(),
+                    sleepMinutes: sleepMinutes,
+                    // Inject a fake baseline recovery/strain for past days so the math doesn't break
+                    $setOnInsert: { recovery: 80, strain: 50 } 
+                },
+                { upsert: true, new: true }
+            );
+            addedCount++;
+        }
+        
+        res.send(`<h1>✅ Time Machine Success!</h1><p>Synced ${addedCount} past sleep records from Google Health into your database. JARVIS is now fully trained.</p>`);
+    } catch (err) {
+        console.error("Sync Error:", err);
+        res.status(500).send("Error syncing Google Health data.");
+    }
+});
+
 // 3. Fetch Coursework using School Access Token
 app.get('/api/classroom/assignments', async (req, res) => {
     const authHeader = req.headers.authorization;
